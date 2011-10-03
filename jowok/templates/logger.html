@@ -1,0 +1,54 @@
+<html>
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/dojo/1.6/dojo/dojo.xd.js" type="text/javascript" >
+</script>
+<script type='text/javascript'>
+    dojo.require("dojox.socket");
+    dojo.require("dojox.socket.Reconnect");
+    dojo.addOnLoad(function(){
+
+        //var ws = new WebSocket("ws://localhost:8888/comet");
+        //ws.onopen = function() {
+        //    ws.send("This is a message from the browser to the server");
+        //};
+        //ws.onmessage = function(event) {
+        //    alert("The server sent a message: " + event.data);
+        //};
+        var socket = dojox.socket("/comet");
+        socket = dojox.socket.Reconnect(socket);
+        socket.on("open", function(event){
+            dojo.attr('status',{innerHTML:'Connected', class:'connected'});
+            socket.send("hi server");
+        });
+        socket.on("message", function(event){
+            dojo.attr('status',{innerHTML:'Connected', class:'connected'});
+            var data = event.data;
+            // do something with the data from the server
+            console.log(data);
+            dojo.create("li",{innerHTML: data},"log", "last");
+        });
+        socket.on("close", function(event){
+            dojo.attr('status',{innerHTML:'Disconnected', class:'disconnected'});
+        });
+        socket.on(null, function(event){
+            console.log(event);
+        });
+
+    });
+</script>
+<style type='text/css'>
+    .connected{
+        background:green;
+    }
+    .disconnected{
+        background:red;
+    }
+</style>
+</head>
+WebSocket Logger:
+<br>
+Status: <span id="status">Disconnected</span>
+<ol id="log">
+
+</ol>
+</html>

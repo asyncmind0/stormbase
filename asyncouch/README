@@ -1,0 +1,4 @@
+An async wrapper for accessing couchdb
+
+Based on Jacob Sondergaard's work at
+https://bitbucket.org/nephics/tornado-couchdb/

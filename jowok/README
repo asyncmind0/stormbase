@@ -1,0 +1,28 @@
+Jowok (alpha)
+
+    common koel, also called stormbird, Eudynamis scolopacea
+    The common koel has a distinctive call - jowok-jowok-jowok
+    which signals to the Wagiman that the wet season is soon to begin.
+    This call is also a sign that the fruit of jalabol
+    'black plum' will soon be ripe.
+                                (The Wagiman online dictionary)
+
+
+README
+======
+
+Jowok is a standalone logging server.
+
+ - it uses websockets to pump messages to the browser.
+ - it has an xmpp client to send log messages to recepients.
+ - it receives log messages through a zeromq socket.
+
+
+DEPENDENCIES
+============
+
+Tornado Webserver
+SleekXmpp
+Dojo
+PyZmq
+ZeroMq
