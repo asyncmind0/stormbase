@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 import dateutil.parser
 from uuid import uuid4
-from stormbase.debug import debug
+from stormbase.debug import debug, trace
 
 
 class ViewResult(list):
@@ -37,6 +37,8 @@ class Document(dict):
                 else :
                     value[tkey] = default[tkey]
             except Exception as e:
+                logging.debug('Tkey:%s , Values:%s' , tkey, value)
+                logging.error(e)
                 debug()
         if 'doc_type' not in val_keys:
             value['doc_type'] = self.__class__.__name__
@@ -84,6 +86,8 @@ class CouchDbAdapter(couch.AsyncCouch):
 def wrap_results(data, model=Document):
     if isinstance(data, couch.NotFound) or not data:
         return None
+    elif isinstance(data, couch.CouchException):
+        raise data
     elif isinstance(data, list):
         data = filter( lambda x: x, data)
         values = ViewResult([ model(r) for r in data ])
