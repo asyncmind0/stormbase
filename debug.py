@@ -1,12 +1,11 @@
 import logging
-import ipdb
 import sys, traceback 
 from traceback import format_exception
 
-from IPython.core import ultratb
+from IPython.core import ultratb, debugger
 ultratrace = ultratb.FormattedTB(mode='Plain',color_scheme='Linux', call_pdb=0)
 
-from ipdb import set_trace as debug
+debug = debugger.Tracer()
 
 def trace():
     tyep, value, traceback = sys.exc_info()
