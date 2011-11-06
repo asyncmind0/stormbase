@@ -1,3 +1,4 @@
+from debug import debug as sj_debug
 import couch
 import logging
 from datetime import datetime
@@ -23,11 +24,11 @@ class Document(dict):
         self[name] = value
 
     def __init__(self,value={}):
-        default = self.default
-        type_keys = default.keys()
-        val_keys = value.keys()
-        for tkey in type_keys:
-            try :
+        try :
+            default = self.default
+            type_keys = default.keys()
+            val_keys = value.keys()
+            for tkey in type_keys:
                 if tkey in val_keys and value[tkey]:
                     if isinstance(default[tkey], datetime ):
                         if not isinstance(value[tkey], datetime) :
@@ -36,13 +37,12 @@ class Document(dict):
                         value[tkey] = type(default[tkey])(value[tkey])
                 else :
                     value[tkey] = default[tkey]
-            except Exception as e:
-                logging.debug('Tkey:%s , Values:%s' , tkey, value)
-                logging.error(e)
-                debug()
-        if 'doc_type' not in val_keys:
-            value['doc_type'] = self.__class__.__name__
-        super(Document, self).__init__(value)
+            if 'doc_type' not in val_keys:
+                value['doc_type'] = self.__class__.__name__
+            super(Document, self).__init__(value)
+        except Exception as e:
+            trace()
+            sj_debug() ############################## Breakpoint ##############################
 
     @classmethod
     def add_defaults(cls,**kwargs):
@@ -84,21 +84,25 @@ class CouchDbAdapter(couch.AsyncCouch):
         return json.dumps(value, cls = CouchEncoder)
 
 def wrap_results(data, model=Document):
-    if isinstance(data, couch.NotFound) or not data:
-        return None
-    elif isinstance(data, couch.CouchException):
-        raise data
-    elif isinstance(data, list):
-        data = filter( lambda x: x, data)
-        values = ViewResult([ model(r) for r in data ])
-        return values
-    elif 'rows' in data.keys():
-        rows = data['rows']
-        values = ViewResult([ model(r['value']) for r in rows ])
-        values.offset = data['offset']
-        return values
-    else :
-        return model(data)
+    try:
+        if isinstance(data, couch.NotFound) or not data:
+            return []
+        elif isinstance(data, couch.CouchException):
+            raise data
+        elif isinstance(data, list):
+            data = filter( lambda x: x, data)
+            values = ViewResult([ model(r) for r in data ])
+            return values
+        elif 'rows' in data.keys():
+            rows = data['rows']
+            values = ViewResult([ model(r['value']) for r in rows ])
+            values.offset = data['offset']
+            return values
+        else :
+            return model(data)
+    except Exception as e:
+        trace()
+        sj_debug() ############################## Breakpoint ##############################
 
 def _w(cb, model=Document):
     def mycb(data):

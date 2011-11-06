@@ -21,12 +21,13 @@ class StormBaseHandler(tornado.web.RequestHandler):
     def __init__(self, *argc, **argkw):
         super(StormBaseHandler, self).__init__(*argc, **argkw)
         self.session = session.Session(self.application.session_manager, self)
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def get_current_user(self):
-        user_json = self.get_secure_cookie("user")
-        if not user_json: return None
-        return tornado.escape.json_decode(user_json)
-
+        userid = self.get_secure_cookie("user")
+        user_obj = self.session.get(userid,None)
+        if not userid or not user_obj: return None
+        return user_obj
 
     def _default_template_variables(self, kwargs):
         kwargs['options']=options
@@ -35,10 +36,12 @@ class StormBaseHandler(tornado.web.RequestHandler):
         kwargs['xsrf_form_html']=self.xsrf_form_html
         kwargs['xsrf_token']=self.xsrf_token
 
-    def render(self, template_name, **kwargs):
+    def render(self, template_name, finish=True, **kwargs):
         self._default_template_variables(kwargs)
         template = self.application.jinja_env.get_template(template_name)
         self.write(template.render(kwargs))
+        if finish :
+            self.finish()
 
     def render_string_template(self, string_template, **kwargs):
         self._default_template_variables(kwargs)
@@ -62,9 +65,9 @@ class StormBaseHandler(tornado.web.RequestHandler):
             return ROOT+url[1:]
         return ROOT+url
 
-    def get_error_html(self, status_code, **kwargs):
-        self.render('error.html', status_code=status_code,
-            message=httplib.responses[status_code])
+    #def get_error_html(self, status_code, **kwargs):
+    #    self.render('error.html', status_code=status_code,
+    #        message=httplib.responses[status_code])
 
     def error(self,exception):
         try:
