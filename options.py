@@ -37,6 +37,7 @@ def parse_options():
 def configure():
     define_options()
     parse_options()
+
     logging.basicConfig()
     #logging.getLogger().setLevel(logging.INFO)
     #logging.getLogger('httpclient').setLevel(logging.DEBUG)

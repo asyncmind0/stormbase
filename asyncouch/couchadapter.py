@@ -1,4 +1,3 @@
-from debug import debug as sj_debug
 import couch
 import logging
 from datetime import datetime
@@ -15,6 +14,8 @@ class Document(dict):
     default = {}
     """Makes a dictionary behave like an object."""
     def __getattr__(self, name):
+        if name == 'doc_type':
+            return  self.__class__.__name__
         try:
             return self[name]
         except KeyError:
@@ -37,12 +38,9 @@ class Document(dict):
                         value[tkey] = type(default[tkey])(value[tkey])
                 else :
                     value[tkey] = default[tkey]
-            if 'doc_type' not in val_keys:
-                value['doc_type'] = self.__class__.__name__
             super(Document, self).__init__(value)
         except Exception as e:
             trace()
-            sj_debug() ############################## Breakpoint ##############################
 
     @classmethod
     def add_defaults(cls,**kwargs):
@@ -78,6 +76,8 @@ class CouchDbAdapter(couch.AsyncCouch):
     def save_doc(self, doc, callback=None):
         if '_id' not in doc:
             doc['_id'] = unicode(uuid4())
+        if isinstance(doc, Document):
+            doc['doc_type'] = doc.__class__.__name__
         super(CouchDbAdapter,self).save_doc(doc, callback)
 
     def _json_encode(self,value):
