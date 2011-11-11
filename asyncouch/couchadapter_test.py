@@ -24,7 +24,6 @@ class CouchDbAdapterTest(AsyncTestCase,LogTrapTestCase):
             pass
         self.db.delete_db(delete_cb)
 
-    @unittest.skip
     def test_create_delete(self):
         def callback(db, info):
             def delete_cb(dele):

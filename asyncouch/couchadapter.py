@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
-import os
->>>>>>> 974e181... created tests for couchdbadapter, added methods for initializing views(WIP)
+import os,re, codecs
 import couch
 import logging
 from datetime import datetime
@@ -109,24 +106,37 @@ class CouchDbAdapter(couch.AsyncCouch):
 
     @gen.engine
     def init_resources(self, resource_path,callback):
+        """ loads views into db
+        TODO: remove deleted views
+        """
         _design = os.path.join(resource_path,'_design')
         resources = {}
         def cb(arg,dirname, fname):
             if fname[0] in ['map.js','reduce.js']:
                 key = '_design'+'/'+dirname.rsplit(os.path.sep,3)[1]
+                viewname = dirname.rsplit(os.path.sep,3)[3]
                 views = resources.get(key,[])
-                views.append(os.path.join(dirname,fname[0]))
+                views.append((viewname, os.path.join(dirname,fname[0])))
                 resources[key] = views
         os.path.walk(_design, cb,None)
+        docs = []
 
         for key in resources.keys():
             url = ''.join(['/', self.db_name, '/', key])
             doc = yield gen.Task(self._http_get,url)
-            if isinstance(doc, dict):
-                print "Document ",doc
+            doc = doc if isinstance(doc,dict) else {}
+            for k,v in  resources[key]:
+                if v.endswith('map.js'):
+                    vtype = 'map'
+                elif v.endswith('reduce.js'):
+                    vtype = 'reduce'
+                views = doc.get('views',{})
+                views[k] = { vtype: read(v)}
+                doc['views'] = views
+            docs.append(doc)
+        yield gen.Task(self.save_docs, docs)
+
         callback()
-
-
 
     def view(self, design_doc_name, view_name, callback=None, model=Document,**kwargs):
         super(CouchDbAdapter,self).view(design_doc_name,view_name, wrap_callback(callback, model), **kwargs)
@@ -145,3 +155,19 @@ class CouchDbAdapter(couch.AsyncCouch):
 
     def _json_encode(self,value):
         return json.dumps(value, cls = CouchEncoder)
+
+
+def read(fname, utf8=True, force_read=False):
+    """ read file content"""
+    if utf8:
+        try:
+            with codecs.open(fname, 'rb', "utf-8") as f:
+                return f.read()
+        except UnicodeError, e:
+            if force_read:
+                return read(fname, utf8=False)
+            raise
+    else:
+        with open(fname, 'rb') as f:
+            return f.read()
+
