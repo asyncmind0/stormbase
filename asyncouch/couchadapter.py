@@ -1,10 +1,15 @@
+<<<<<<< HEAD
+=======
+import os
+>>>>>>> 974e181... created tests for couchdbadapter, added methods for initializing views(WIP)
 import couch
 import logging
 from datetime import datetime
 import json
 import dateutil.parser
 from uuid import uuid4
-from stormbase.debug import debug, trace
+from debug import debug, trace
+from tornado import gen
 
 
 class ViewResult(list):
@@ -54,40 +59,11 @@ class CouchEncoder(json.JSONEncoder):
             return str(obj)
         return json.JSONEncoder.default(self, obj)
 
-class CouchDbAdapter(couch.AsyncCouch):
-    def __init__(self, db_name, on_ready, host='localhost', port=5984):
-        super(CouchDbAdapter,self).__init__( db_name, host, port)
-        def on_info(info):
-            if hasattr(info,'code') and info.code == 404 :
-                self.create_db(lambda info: on_ready(self,info))
-            else :
-                on_ready(self, info)
-        self.info_db(on_info)
-
-    def view(self, design_doc_name, view_name, callback=None, model=Document,**kwargs):
-        super(CouchDbAdapter,self).view(design_doc_name,view_name, _w(callback, model), **kwargs)
-
-    def get_doc(self, doc_id, model=Document, callback=None):
-        super(CouchDbAdapter,self).get_doc(doc_id, _w(callback, model))
-
-    def get_docs(self, doc_ids, model=Document, callback=None):
-        super(CouchDbAdapter,self).get_docs(doc_ids, _w(callback, model))
-
-    def save_doc(self, doc, callback=None):
-        if '_id' not in doc:
-            doc['_id'] = unicode(uuid4())
-        if isinstance(doc, Document):
-            doc['doc_type'] = doc.__class__.__name__
-        super(CouchDbAdapter,self).save_doc(doc, callback)
-
-    def _json_encode(self,value):
-        return json.dumps(value, cls = CouchEncoder)
-
 def wrap_results(data, model=Document):
     try:
-        if isinstance(data, couch.NotFound) or not data:
+        if not data:
             return []
-        elif isinstance(data, couch.CouchException):
+        elif isinstance(data, Exception):
             raise data
         elif isinstance(data, list):
             data = filter( lambda x: x, data)
@@ -98,14 +74,74 @@ def wrap_results(data, model=Document):
             values = ViewResult([ model(r['value']) for r in rows ])
             values.offset = data['offset']
             return values
-        else :
+        elif isinstance(data, dict):
             return model(data)
+        else :
+            raise Exception("Wierd results")
     except Exception as e:
         trace()
-        sj_debug() ############################## Breakpoint ##############################
+        raise e
 
-def _w(cb, model=Document):
+def wrap_callback(cb, model=Document):
     def mycb(data):
         results = wrap_results(data, model)
         cb(results)
     return mycb
+
+class CouchDbAdapter(couch.AsyncCouch):
+    def __init__(self, db_name, create=True, callback=None, host='localhost', 
+            resource_path=None, port=5984, ioloop=None):
+        super(CouchDbAdapter,self).__init__( db_name, host, port, ioloop=ioloop)
+        self.initialize(callback, create, resource_path)
+
+    @gen.engine
+    def initialize(self, callback, create = True, resource_path=''):
+        info = yield gen.Task(self.info_db)
+        if hasattr(info,'code') and info.code == 404 :
+            if not create:
+                raise info
+            res = yield gen.Task(self.create_db)
+            info = yield gen.Task(self.info_db)
+            info.update(res)
+        if resource_path:
+            yield gen.Task(self.init_resources,resource_path)
+        callback(self, info)
+
+    @gen.engine
+    def init_resources(self, resource_path,callback):
+        _design = os.path.join(resource_path,'_design')
+        resources = {}
+        def cb(arg,dirname, fname):
+            if fname[0] in ['map.js','reduce.js']:
+                key = '_design'+'/'+dirname.rsplit(os.path.sep,3)[1]
+                views = resources.get(key,[])
+                views.append(os.path.join(dirname,fname[0]))
+                resources[key] = views
+        os.path.walk(_design, cb,None)
+
+        for key in resources.keys():
+            url = ''.join(['/', self.db_name, '/', key])
+            doc = yield gen.Task(self._http_get,url)
+            if isinstance(doc, dict):
+                print "Document ",doc
+        callback()
+
+
+
+    def view(self, design_doc_name, view_name, callback=None, model=Document,**kwargs):
+        super(CouchDbAdapter,self).view(design_doc_name,view_name, wrap_callback(callback, model), **kwargs)
+
+    def get_doc(self, doc_id, model=Document, callback=None):
+        super(CouchDbAdapter,self).get_doc(doc_id, _w(callback, model))
+
+    def get_docs(self, doc_ids, model=Document, callback=None):
+        super(CouchDbAdapter,self).get_docs(doc_ids, wrap_callback(callback, model))
+
+    def save_doc(self, doc, callback=None):
+        if '_id' not in doc:
+            doc['_id'] = unicode(uuid4())
+        doc['doc_type'] = self.__class__.__name__
+        super(CouchDbAdapter,self).save_doc(doc, callback)
+
+    def _json_encode(self,value):
+        return json.dumps(value, cls = CouchEncoder)

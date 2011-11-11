@@ -1,3 +1,4 @@
+from debug import debug as sj_debug
 #
 #nephics / tornado-couchdb
 #A Python module providing blocking and non-blocking (asynchronous) clients to
@@ -311,9 +312,9 @@ class BlockingCouch(Couch):
 class AsyncCouch(Couch):
     '''Basic wrapper class for asynchronous operations on a CouchDB'''
 
-    def __init__(self, db_name, host='localhost', port=5984):
+    def __init__(self, db_name, host='localhost', port=5984, ioloop=None):
         self.couch_url = 'http://{0}:{1}'.format(host, port)
-        self.client = httpclient.AsyncHTTPClient()
+        self.client = httpclient.AsyncHTTPClient(ioloop)
         self.db_name = db_name
 
 
