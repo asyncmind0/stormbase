@@ -124,7 +124,7 @@ class CouchDbAdapter(couch.AsyncCouch):
         for key in resources.keys():
             url = ''.join(['/', self.db_name, '/', key])
             doc = yield gen.Task(self._http_get,url)
-            doc = doc if isinstance(doc,dict) else {}
+            doc = doc if isinstance(doc,dict) else {'_id':key}
             for k,v in  resources[key]:
                 if v.endswith('map.js'):
                     vtype = 'map'
@@ -150,7 +150,7 @@ class CouchDbAdapter(couch.AsyncCouch):
     def save_doc(self, doc, callback=None):
         if '_id' not in doc:
             doc['_id'] = unicode(uuid4())
-        doc['doc_type'] = self.__class__.__name__
+        doc['doc_type'] = doc.__class__.__name__
         super(CouchDbAdapter,self).save_doc(doc, callback)
 
     def _json_encode(self,value):

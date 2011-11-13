@@ -9,7 +9,9 @@ import traceback
 
 from tornado import gen
 from tornado import web
+from time import time
 
+CACHID=time()
 
 def async_engine(func):
     return web.asynchronous(gen.engine(func))
@@ -35,6 +37,8 @@ class StormBaseHandler(tornado.web.RequestHandler):
         kwargs['url']=self.url
         kwargs['xsrf_form_html']=self.xsrf_form_html
         kwargs['xsrf_token']=self.xsrf_token
+        kwargs['cacheid']= CACHID 
+        kwargs['current_user']= self.current_user 
 
     def render(self, template_name, finish=True, **kwargs):
         self._default_template_variables(kwargs)
