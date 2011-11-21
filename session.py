@@ -17,17 +17,17 @@ class Session(SessionData):
     def __init__(self, session_manager, request_handler):
         self.session_manager = session_manager
         self.request_handler = request_handler
-        
+
         try:
             current_session = session_manager.get(request_handler)
         except InvalidSessionException:
             current_session = session_manager.get()
-            
+
         for key, data in current_session.iteritems():
             self[key] = data
         self.session_id = current_session.session_id
         self.hmac_key = current_session.hmac_key
-    
+
     def save(self):
         self.session_manager.set(self.request_handler, self)
 
