@@ -21,9 +21,6 @@ def async_engine(func):
 class StormBaseHandler(tornado.web.RequestHandler):
     def initialize(self,*args, **kwargs):
         self.db = self.application.db
-
-    def __init__(self, *argc, **argkw):
-        super(StormBaseHandler, self).__init__(*argc, **argkw)
         self.session = session.Session(self.application.session_manager, self)
         self.logger = logging.getLogger(self.__class__.__name__)
 
