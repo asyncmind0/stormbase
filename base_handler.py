@@ -10,6 +10,8 @@ import traceback
 from tornado import gen
 from tornado import web
 from time import time
+import json
+from stormbase.util import JSONEncoder
 
 CACHID=time()
 
@@ -53,7 +55,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         return template.render(**kwargs).strip()
 
     def render_json(self, data):
-        return self.write(tornado.escape.json_encode(data))
+        return self.write(json.dumps(data, cls = JSONEncoder))
 
     def static_url(self,url):
         STATIC_ROOT = options.static_root

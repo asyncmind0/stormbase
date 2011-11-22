@@ -8,6 +8,7 @@ from uuid import uuid4
 from debug import debug, trace
 from tornado import gen
 
+from stormbase.util import JSONEncoder
 
 class ViewResult(list):
     offset = 0
@@ -50,11 +51,6 @@ class Document(dict):
         d.update(**kwargs)
         return d
 
-class CouchEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime):
-            return str(obj)
-        return json.JSONEncoder.default(self, obj)
 
 def wrap_results(data, model=Document):
     try:
@@ -154,7 +150,7 @@ class CouchDbAdapter(couch.AsyncCouch):
         super(CouchDbAdapter,self).save_doc(doc, callback)
 
     def _json_encode(self,value):
-        return json.dumps(value, cls = CouchEncoder)
+        return json.dumps(value, cls = JSONEncoder)
 
 
 def read(fname, utf8=True, force_read=False):
