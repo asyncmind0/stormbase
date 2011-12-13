@@ -7,7 +7,7 @@ from tornado import httpclient
 class LogFilter(logging.Filter):
     def filter(self,rec):
         if rec.module in ['httpclient', 'curl_httpclient'] and rec.levelno == logging.DEBUG:
-            return False
+            return True
         elif rec.msg == '/static/' and rec.levelno == logging.DEBUG:
             return False
         return True
@@ -21,7 +21,8 @@ def define_options(other_options=()):
     define("couchdb_uri")
     define("couchdb_database")
     define("site_name")
-    define("static_root")
+    define("static_root", default='/static/')
+    define("script_root", default='/static/javascript')
     define("root")
     define("server_host")
     for opt in other_options:

@@ -4,6 +4,7 @@ import tornado.web
 from tornado.options import options
 from stormbase import session
 import httplib
+import urllib
 import logging
 import traceback
 
@@ -12,12 +13,44 @@ from tornado import web
 from time import time
 import json
 from stormbase.util import JSONEncoder
+from tornado.curl_httpclient import CurlAsyncHTTPClient
+from urlparse import urlparse
+from tornado.httpclient import AsyncHTTPClient
 
 CACHID=time()
 
 def async_engine(func):
     return web.asynchronous(gen.engine(func))
 
+class ProxyCurlAsyncHTTPClient(CurlAsyncHTTPClient):
+    fetch_args = None
+    def initialize(self, io_loop=None, max_clients=10,
+                   max_simultaneous_connections=None, **kwargs):
+        super(ProxyCurlAsyncHTTPClient, self).initialize(io_loop, max_clients,
+                max_simultaneous_connections)
+        self.fetch_args = kwargs
+
+    def fetch(self, request, callback, **kwargs):
+        kwargs.update(self.fetch_args)
+        sj_debug() ############################## Breakpoint ##############################
+        if 'no_proxy' in kwargs.keys():
+            logging.debug("found no_proxy:%s" % str(kwargs['no_proxy']))
+            if isinstance(request, str):
+                if urlparse(request).hostname in kwargs['no_proxy']:
+                    del kwargs['proxy_host']
+                    del kwargs['proxy_port']
+                else :
+                    sj_debug() ############################## Breakpoint ##############################
+            del kwargs['no_proxy']
+        super(ProxyCurlAsyncHTTPClient, self).fetch(request, callback, **kwargs)
+
+proxy_url = os.getenv('http_proxy','')
+
+if proxy_url:
+    parsed = urlparse(proxy_url)
+    AsyncHTTPClient.configure(ProxyCurlAsyncHTTPClient, proxy_host=parsed.hostname,
+        proxy_port=parsed.port, proxy_username=parsed.username, proxy_password=parsed.password,
+                no_proxy=['localhost'])
 class StormBaseHandler(tornado.web.RequestHandler):
     def initialize(self,*args, **kwargs):
         self.db = self.application.db
@@ -36,8 +69,8 @@ class StormBaseHandler(tornado.web.RequestHandler):
         kwargs['url']=self.url
         kwargs['xsrf_form_html']=self.xsrf_form_html
         kwargs['xsrf_token']=self.xsrf_token
-        kwargs['cacheid']= CACHID 
-        kwargs['current_user']= self.current_user 
+        kwargs['add_javascript']= self.add_javascript
+        kwargs['current_user']= self.current_user
 
     def render(self, template_name, finish=True, **kwargs):
         self._default_template_variables(kwargs)
@@ -55,18 +88,19 @@ class StormBaseHandler(tornado.web.RequestHandler):
         return self.write(json.dumps(data, cls = JSONEncoder))
 
     def static_url(self,url):
-        STATIC_ROOT = options.static_root
-        if STATIC_ROOT.endswith('/') and url.startswith('/'):
-            return STATIC_ROOT+url[1:]
-        return STATIC_ROOT+url
+        return urllib.basejoin(options.static_root,url)
 
     def url(self,url):
-        #return '/macrohms/static/'+url
-        ROOT = options.root
-        #debug()
-        if ROOT.endswith('/') and url.startswith('/'):
-            return ROOT+url[1:]
-        return ROOT+url
+        return urllib.basejoin(options.root,url)
+
+    def add_javascript(self, script, cache=True, **kwargs):
+        if script.startswith('http'):
+            path = script
+        else :
+            path = urllib.basejoin(options.script_root, script)
+        cachestring =  '' if cache or not options.debug else '?cacheid=%s' % CACHID
+        return """<script src="%s%s" type="text/javascript"></script>""" \
+                % (path, cachestring)
 
     #def get_error_html(self, status_code, **kwargs):
     #    self.render('error.html', status_code=status_code,
