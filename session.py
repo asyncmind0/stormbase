@@ -1,3 +1,4 @@
+from debug import debug as sj_debug
 '''
 @author: Manuel Mejia
 '''
