@@ -312,8 +312,12 @@ class BlockingCouch(Couch):
 class AsyncCouch(Couch):
     '''Basic wrapper class for asynchronous operations on a CouchDB'''
 
-    def __init__(self, db_name, host='localhost', port=5984, ioloop=None):
-        self.couch_url = 'http://{0}:{1}'.format(host, port)
+    def __init__(self, db_name, host='localhost', port=5984,username=None, 
+            password=None, ioloop=None):
+        if username:
+            self.couch_url = 'http://{0}:{1}@{2}:{3}'.format(username,password,host, port)
+        else:
+            self.couch_url = 'http://{0}:{1}'.format(host, port)
         self.client = httpclient.AsyncHTTPClient(ioloop)
         self.db_name = db_name
 

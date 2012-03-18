@@ -83,8 +83,9 @@ def wrap_callback(cb, model=Document):
 
 class CouchDbAdapter(couch.AsyncCouch):
     def __init__(self, db_name, create=True, callback=None, host='localhost', 
-            resource_path=None, port=5984, ioloop=None):
-        super(CouchDbAdapter,self).__init__( db_name, host, port, ioloop=ioloop)
+            resource_path=None, port=5984, ioloop=None, username=None,password=None):
+        super(CouchDbAdapter,self).__init__( db_name, host=host, port=port, 
+                username=username, password=password, ioloop=ioloop)
         self.initialize(callback, create, resource_path)
 
     @gen.engine
