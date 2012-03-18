@@ -139,7 +139,7 @@ class CouchDbAdapter(couch.AsyncCouch):
         super(CouchDbAdapter,self).view(design_doc_name,view_name, wrap_callback(callback, model), **kwargs)
 
     def get_doc(self, doc_id, model=Document, callback=None):
-        super(CouchDbAdapter,self).get_doc(doc_id, _w(callback, model))
+        super(CouchDbAdapter,self).get_doc(doc_id, wrap_callback(callback, model))
 
     def get_docs(self, doc_ids, model=Document, callback=None):
         super(CouchDbAdapter,self).get_docs(doc_ids, wrap_callback(callback, model))

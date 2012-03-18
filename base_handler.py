@@ -1,3 +1,4 @@
+from debug import debug as sj_debug
 from stormbase.debug import debug as sj_debug
 import tornado
 import tornado.web
@@ -7,6 +8,7 @@ import httplib
 import urllib
 import logging
 import traceback
+import os
 
 from tornado import gen
 from tornado import web
@@ -32,7 +34,6 @@ class ProxyCurlAsyncHTTPClient(CurlAsyncHTTPClient):
 
     def fetch(self, request, callback, **kwargs):
         kwargs.update(self.fetch_args)
-        sj_debug() ############################## Breakpoint ##############################
         if 'no_proxy' in kwargs.keys():
             logging.debug("found no_proxy:%s" % str(kwargs['no_proxy']))
             if isinstance(request, str):
@@ -51,6 +52,7 @@ if proxy_url:
     AsyncHTTPClient.configure(ProxyCurlAsyncHTTPClient, proxy_host=parsed.hostname,
         proxy_port=parsed.port, proxy_username=parsed.username, proxy_password=parsed.password,
                 no_proxy=['localhost'])
+
 class StormBaseHandler(tornado.web.RequestHandler):
     def initialize(self,*args, **kwargs):
         self.db = self.application.db
@@ -60,6 +62,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
         userid = self.get_secure_cookie("user")
         user_obj = self.session.get(userid,None)
+        logging.debug("LOGINSTATUS: %s, %s" % (userid,user_obj!=None))
         if not userid or not user_obj: return None
         return user_obj
 
