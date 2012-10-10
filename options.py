@@ -4,13 +4,15 @@ import tornado
 from tornado.options import options, define
 from tornado import httpclient
 
+
 class LogFilter(logging.Filter):
-    def filter(self,rec):
+    def filter(self, rec):
         if rec.module in ['httpclient', 'curl_httpclient'] and rec.levelno == logging.DEBUG:
             return True
         elif rec.msg == '/static/' and rec.levelno == logging.DEBUG:
             return False
         return True
+
 
 def define_options(other_options=()):
     define("port", default=8000, help="run on the given port", type=int)
@@ -28,6 +30,7 @@ def define_options(other_options=()):
     for opt in other_options:
         define(*opt)
 
+
 def parse_options():
     tornado.options.parse_command_line()
     _configfile_ = "conf/production.conf"
@@ -38,10 +41,11 @@ def parse_options():
     tornado.options.parse_config_file(_configfile_)
     tornado.options.parse_command_line()
 
+
 def configure(other_options=()):
     define_options(other_options)
     parse_options()
-    
+
     logging.basicConfig()
     #logging.getLogger().setLevel(logging.INFO)
     #logging.getLogger('httpclient').setLevel(logging.DEBUG)
@@ -49,10 +53,9 @@ def configure(other_options=()):
     #logging.getLogger().addFilter(logging.Filter('httpclient'))
     #logging.getLogger().addHandler(LogHandler())
     logging.getLogger().addFilter(LogFilter())
-    
+
     logging.debug("Hello NiceDesign")
     logging.info("Hello NiceDesign")
     logging.warning("Hello NiceDesign")
     logging.error("Hello NiceDesign")
     logging.critical("Hello NiceDesign")
-

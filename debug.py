@@ -1,13 +1,25 @@
-import logging
-import sys, traceback 
-from traceback import format_exception
+# this module defines two functions to debug 1)debug()  2)debugall()
+import sys, traceback
+from IPython import embed as shell
+from IPython.core import ultratb
+#ultratrace = ultratb.FormattedTB(mode='Plain',color_scheme='Linux', call_pdb=0)
+ultratrace = ultratb.VerboseTB()
+#sys.excepthook = ultratrace
+from IPython.core.debugger import Tracer
 
-from IPython.core import ultratb, debugger
-ultratrace = ultratb.FormattedTB(mode='Plain',color_scheme='Linux', call_pdb=0)
-
-debug = debugger.Tracer()
+debug = Tracer('Linux')
 
 def trace():
-    tyep, value, traceback = sys.exc_info()
-    ultratrace(tyep,value,traceback)
-    logging.error(format_exception(tyep,value,traceback))
+    ultratrace(sys.exc_info())
+
+def trace_all() :
+    exc_type , exc_value, exc_traceback = sys.exc_info()
+    #print "The exc_type, exc_value, exc_traceback is been printed"
+    traceback.print_exception(exc_type, exc_value, exc_traceback)
+    traceback.print_exception(exc_type, exc_value )
+
+#def trace_formatted() :
+#    exc_type , exc_value, exc_traceback = sys.exc_info()
+#    #print repr(traceback.format_exception(exc_type, exc_value, exc_traceback))
+#
+#    traceback.print_exception(exc_type, exc_value )

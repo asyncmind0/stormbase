@@ -12,8 +12,10 @@ from debug import debug as sj_debug
 from tornado import httpclient
 from tornado.escape import json_decode, json_encode, url_escape
 
+
 class Couch(object):
     _json_encode = json_decode
+
 
 class BlockingCouch(Couch):
     '''Basic wrapper class for blocking operations on a CouchDB'''
@@ -43,7 +45,8 @@ class BlockingCouch(Couch):
 
     def pull_db(self, source, create_target=False, raise_error=True):
         '''Replicate changes from a source database to current (target) database'''
-        body = self._json_encode({'source': source, 'target': self.db_name, 'create_target': create_target})
+        body = self._json_encode({'source': source, 'target': self.db_name,
+                                 'create_target': create_target})
         return self._http_post('/_replicate', body, raise_error=raise_error, connect_timeout=120.0, request_timeout=120.0)
 
     def uuids(self, count=1):
@@ -86,14 +89,16 @@ class BlockingCouch(Couch):
            and rev of the saved docs.'''
         # use bulk docs API to update the docs
         url = ''.join(['/', self.db_name, '/_bulk_docs'])
-        body = self._json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
+        body = self._json_encode(
+            {'all_or_nothing': all_or_nothing, 'docs': docs})
         return self._http_post(url, body, raise_error=raise_error)
 
     def delete_doc(self, doc, raise_error=True):
         '''Delete a document'''
         if '_rev' not in doc or '_id' not in doc:
             raise KeyError('No id or revision information in doc')
-        url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '?rev=', doc['_rev']])
+        url = ''.join(['/', self.db_name, '/', url_escape(doc[
+                      '_id']), '?rev=', doc['_rev']])
         return self._http_delete(url, raise_error=raise_error)
 
     def delete_docs(self, docs, all_or_nothing=False, raise_error=True):
@@ -105,7 +110,8 @@ class BlockingCouch(Couch):
         [doc.update(deleted) for doc in docs]
         # use bulk docs API to update the docs
         url = ''.join(['/', self.db_name, '/_bulk_docs'])
-        body = self._json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
+        body = self._json_encode(
+            {'all_or_nothing': all_or_nothing, 'docs': docs})
         return self._http_post(url, body, raise_error=raise_error)
 
     def get_attachment(self, doc, attachment_name, mimetype=None, raise_error=True):
@@ -119,7 +125,8 @@ class BlockingCouch(Couch):
             if '_attachments' not in doc:
                 raise ValueError('No attachments in doc, cannot get content type of attachment')
             elif attachment_name not in doc['_attachments']:
-                raise ValueError('Document does not have an attachment by the given name')
+                raise ValueError(
+                    'Document does not have an attachment by the given name')
             else:
                 mimetype = doc['_attachments'][attachment_name]['content_type']
         url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
@@ -133,7 +140,8 @@ class BlockingCouch(Couch):
         least having the key _id, and if doc is existing in the database,
         it shall also contain the key _rev'''
         if any(key not in attachment for key in ['mimetype', 'name', 'data']):
-            raise KeyError('Attachment dict is missing one or more required keys')
+            raise KeyError(
+                'Attachment dict is missing one or more required keys')
         if '_rev' in doc:
             q = ''.join(['?rev=', doc['_rev']])
         else:
@@ -210,7 +218,8 @@ class BlockingCouch(Couch):
           inclusive_end=true
           inclusive_end=false
         '''
-        url = ''.join(['/', self.db_name, '/_design/', design_doc_name, '/_view/', view_name])
+        url = ''.join(['/', self.db_name, '/_design/',
+                      design_doc_name, '/_view/', view_name])
         return self._view(url, raise_error=raise_error, **kwargs)
 
     def view_all_docs(self, raise_error=True, **kwargs):
@@ -244,17 +253,20 @@ class BlockingCouch(Couch):
         obj = json_decode(resp.body)
         if raise_error:
             if 'error' in obj:
-                raise relax_exception(httpclient.HTTPError(resp.code, obj['reason'], resp))
+                raise relax_exception(
+                    httpclient.HTTPError(resp.code, obj['reason'], resp))
             elif isinstance(obj, list):
                 # check if there is an error in the list of dicts, raise the first error seen
                 for item in obj:
                     if 'error' in item:
-                        raise relax_exception(httpclient.HTTPError(resp.code, item['reason'], resp))
+                        raise relax_exception(httpclient.HTTPError(
+                            resp.code, item['reason'], resp))
             elif 'rows' in obj:
                 # check if there is an error in the result rows, raise the first error seen
                 for row in obj['rows']:
                     if 'error' in row:
-                        raise relax_exception(httpclient.HTTPError(resp.code, row['error'], resp))
+                        raise relax_exception(httpclient.HTTPError(
+                            resp.code, row['error'], resp))
         return obj
 
     def _fetch(self, request, raise_error, decode=True):
@@ -278,7 +290,7 @@ class BlockingCouch(Couch):
             headers['Accept'] = 'application/json'
             decode = True
         else:
-            # not a JSON response, don't try to decode 
+            # not a JSON response, don't try to decode
             decode = False
         r = httpclient.HTTPRequest(self.couch_url + uri, method='GET',
                                    headers=headers, use_gzip=False)
@@ -309,24 +321,25 @@ class BlockingCouch(Couch):
                                    use_gzip=False)
         return self._fetch(r, raise_error)
 
+
 class AsyncCouch(Couch):
     '''Basic wrapper class for asynchronous operations on a CouchDB'''
 
-    def __init__(self, db_name, host='localhost', port=5984,username=None, 
-            password=None, ioloop=None):
+    def __init__(self, db_name, host='localhost', port=5984, username=None,
+                 password=None, ioloop=None):
         if username:
-            self.couch_url = 'http://{0}:{1}@{2}:{3}'.format(username,password,host, port)
+            self.couch_url = 'http://{0}:{1}@{2}:{3}'.format(
+                username, password, host, port)
         else:
             self.couch_url = 'http://{0}:{1}'.format(host, port)
         self.client = httpclient.AsyncHTTPClient(ioloop)
         self.db_name = db_name
 
-
     # Database operations
-
     def create_db(self, callback=None):
         '''Creates a new database'''
-        self._http_put(''.join(['/', self.db_name, '/']), '', callback=callback)
+        self._http_put(
+            ''.join(['/', self.db_name, '/']), '', callback=callback)
 
     def delete_db(self, callback=None):
         '''Deletes the database'''
@@ -342,8 +355,10 @@ class AsyncCouch(Couch):
 
     def pull_db(self, source, callback=None, create_target=False):
         '''Replicate changes from a source database to current (target) db'''
-        body = self._json_encode({'source': source, 'target': self.db_name, 'create_target': create_target})
-        self._http_post('/_replicate', body, callback=callback, connect_timeout=120.0, request_timeout=120.0)
+        body = self._json_encode({'source': source, 'target': self.db_name,
+                                 'create_target': create_target})
+        self._http_post('/_replicate', body, callback=callback,
+                        connect_timeout=120.0, request_timeout=120.0)
 
     def uuids(self, count=1, callback=None):
         def uuids_cb(resp):
@@ -358,9 +373,7 @@ class AsyncCouch(Couch):
             url = '/_uuids'
         self._http_get(url, callback=uuids_cb)
 
-
     # Document operations
-
     def get_doc(self, doc_id, callback=None):
         '''Open a document with the given id'''
         url = ''.join(['/', self.db_name, '/', url_escape(doc_id)])
@@ -370,11 +383,13 @@ class AsyncCouch(Couch):
         '''Get multiple documents with the given id's'''
         url = ''.join(['/', self.db_name, '/_all_docs?include_docs=true'])
         body = self._json_encode({'keys': doc_ids})
+
         def get_docs_cb(resp):
             if isinstance(resp, Exception):
                 callback(resp)
             else:
-                callback([row['doc'] if 'doc' in row else row for row in resp['rows']])
+                callback([row['doc']
+                         if 'doc' in row else row for row in resp['rows']])
         self._http_post(url, body, callback=get_docs_cb)
 
     def save_doc(self, doc, callback=None):
@@ -393,7 +408,8 @@ class AsyncCouch(Couch):
            and rev of the saved docs.'''
         # use bulk docs API to update the docs
         url = ''.join(['/', self.db_name, '/_bulk_docs'])
-        body = self._json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
+        body = self._json_encode(
+            {'all_or_nothing': all_or_nothing, 'docs': docs})
         self._http_post(url, body, callback=callback)
 
     def delete_doc(self, doc, callback=None):
@@ -401,19 +417,22 @@ class AsyncCouch(Couch):
         if '_rev' not in doc or '_id' not in doc:
             callback(KeyError('No id or revision information in doc'))
         else:
-            url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '?rev=', doc['_rev']])
+            url = ''.join(['/', self.db_name, '/', url_escape(
+                doc['_id']), '?rev=', doc['_rev']])
             self._http_delete(url, callback=callback)
 
     def delete_docs(self, docs, callback=None, all_or_nothing=False):
         '''Delete multiple documents'''
         if any('_rev' not in doc or '_id' not in doc for doc in docs):
-            callback(KeyError('No id or revision information in one or more docs'))
+            callback(
+                KeyError('No id or revision information in one or more docs'))
         else:
             # mark docs as deleted
             map(lambda doc: doc.update({'_deleted': True}), docs)
             # use bulk docs API to update the docs
             url = ''.join(['/', self.db_name, '/_bulk_docs'])
-            body = self._json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
+            body = self._json_encode(
+                {'all_or_nothing': all_or_nothing, 'docs': docs})
             self._http_post(url, body, callback=callback)
 
     def get_attachment(self, doc, attachment_name, mimetype=None, callback=None):
@@ -427,7 +446,8 @@ class AsyncCouch(Couch):
             if '_attachments' not in doc:
                 callback(ValueError('No attachments in doc, cannot get content type of attachment'))
             elif attachment_name not in doc['_attachments']:
-                callback(ValueError('Document does not have an attachment by the given name'))
+                callback(ValueError(
+                    'Document does not have an attachment by the given name'))
             else:
                 mimetype = doc['_attachments'][attachment_name]['content_type']
             url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
@@ -441,7 +461,8 @@ class AsyncCouch(Couch):
         least having the key _id, and if doc is existing in the database,
         it shall also contain the key _rev'''
         if any(key not in attachment for key in ['mimetype', 'name', 'data']):
-            callback(KeyError('Attachment dict is missing one or more required keys'))
+            callback(KeyError(
+                'Attachment dict is missing one or more required keys'))
         else:
             if '_rev' in doc:
                 q = ''.join(['?rev=', doc['_rev']])
@@ -450,7 +471,8 @@ class AsyncCouch(Couch):
             url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
                            url_escape(attachment['name']), q])
             headers = {'Content-Type': attachment['mimetype']}
-            self._http_put(url, body=attachment['data'], headers=headers, callback=callback)
+            self._http_put(url, body=attachment['data'],
+                           headers=headers, callback=callback)
 
     def delete_attachment(self, doc, attachment_name, callback=None):
         '''Delete an attachment to the specified doc. The attatchment shall be
@@ -518,7 +540,8 @@ class AsyncCouch(Couch):
           inclusive_end=true
           inclusive_end=false
         '''
-        url = ''.join(['/', self.db_name, '/_design/', design_doc_name, '/_view/', view_name])
+        url = ''.join(['/', self.db_name, '/_design/',
+                      design_doc_name, '/_view/', view_name])
         self._view(url, callback=callback, **kwargs)
 
     def view_all_docs(self, callback=None, **kwargs):
@@ -557,7 +580,8 @@ class AsyncCouch(Couch):
             # decode the JSON body and pass to the user callback function
             obj = json_decode(resp.body)
             if 'error' in obj:
-                callback(relax_exception(httpclient.HTTPError(resp.code, obj['reason'], resp)))
+                callback(relax_exception(
+                    httpclient.HTTPError(resp.code, obj['reason'], resp)))
             else:
                 callback(obj)
         else:
@@ -608,22 +632,28 @@ class AsyncCouch(Couch):
 class CouchException(httpclient.HTTPError):
     '''Base class for Couch specific exceptions'''
     def __init__(self, HTTPError, msg):
-        httpclient.HTTPError.__init__(self, HTTPError.code, msg, HTTPError.response)
+        httpclient.HTTPError.__init__(
+            self, HTTPError.code, msg, HTTPError.response)
+
 
 class NotModified(CouchException):
     '''HTTP Error 304 (Not Modified)'''
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'The document has not been modified since the last update.')
 
+
 class BadRequest(CouchException):
     '''HTTP Error 400 (Bad Request)'''
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'The syntax of the request was invalid or could not be processed.')
 
+
 class NotFound(CouchException):
     '''HTTP Error 404 (Not Found)'''
     def __init__(self, HTTPError):
-        CouchException.__init__(self, HTTPError, 'The requested resource was not found.')
+        CouchException.__init__(
+            self, HTTPError, 'The requested resource was not found.')
+
 
 class MethodNotAllowed(CouchException):
     '''HTTP Error 405 (Method Not Allowed)'''
@@ -631,21 +661,25 @@ class MethodNotAllowed(CouchException):
         CouchException.__init__(self, HTTPError, 'The request was made using an incorrect request method; '
                                 'for example, a GET was used where a POST was required.')
 
+
 class Conflict(CouchException):
     '''HTTP Error 409 (Conflict)'''
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'The request failed because of a database conflict.')
+
 
 class PreconditionFailed(CouchException):
     '''HTTP Error 412 (Precondition Failed)'''
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'Could not create database - a database with that name already exists.')
 
+
 class InternalServerError(CouchException):
     '''HTTP Error 500 (Internal Server Error)'''
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'The request was invalid and failed, or an error '
                                 'occurred within the CouchDB server that prevented it from processing the request.')
+
 
 def relax_exception(e, callback=None):
     '''Convert HTTPError exception to a Couch specific exception, if possible,
@@ -676,5 +710,3 @@ def relax_exception(e, callback=None):
         callback(ce)
     else:
         return ce
-
-

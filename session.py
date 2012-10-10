@@ -9,10 +9,12 @@ import uuid
 import hashlib
 import pylibmc
 
+
 class SessionData(dict):
     def __init__(self, session_id, hmac_key):
         self.session_id = session_id
         self.hmac_key = hmac_key
+
 
 class Session(SessionData):
     def __init__(self, session_manager, request_handler):
@@ -32,6 +34,7 @@ class Session(SessionData):
     def save(self):
         self.session_manager.set(self.request_handler, self)
 
+
 class SessionManager(object):
     def __init__(self, secret, memcached_address, session_timeout):
         self.secret = secret
@@ -42,26 +45,26 @@ class SessionManager(object):
         try:
             mc = pylibmc.Client(self.memcached_address)
             session_data = raw_data = mc.get(session_id)
-            if raw_data != None:
+            if raw_data is not None:
                 mc.replace(session_id, raw_data, self.session_timeout, 0)
                 session_data = pickle.loads(raw_data)
-            if type(session_data) == type({}):
+            if isinstance(session_data, type({})):
                 return session_data
             else:
                 return {}
         except IOError:
             return {}
 
-    def get(self, request_handler = None):
+    def get(self, request_handler=None):
 
-        if (request_handler == None):
+        if (request_handler is None):
             session_id = None
             hmac_key = None
         else:
             session_id = request_handler.get_secure_cookie("session_id")
             hmac_key = request_handler.get_secure_cookie("verification")
 
-        if session_id == None:
+        if session_id is None:
             session_exists = False
             session_id = self._generate_id()
             hmac_key = self._generate_hmac(session_id)
@@ -84,7 +87,8 @@ class SessionManager(object):
     def set(self, request_handler, session):
         request_handler.set_secure_cookie("session_id", session.session_id)
         request_handler.set_secure_cookie("verification", session.hmac_key)
-        session_data = pickle.dumps(dict(session.items()), pickle.HIGHEST_PROTOCOL)
+        session_data = pickle.dumps(
+            dict(session.items()), pickle.HIGHEST_PROTOCOL)
         mc = pylibmc.Client(self.memcached_address)
         mc.set(session.session_id, session_data, self.session_timeout, 0)
 
@@ -94,6 +98,7 @@ class SessionManager(object):
 
     def _generate_hmac(self, session_id):
         return hmac.new(session_id, self.secret, hashlib.sha256).hexdigest()
+
 
 class InvalidSessionException(Exception):
     pass

@@ -4,17 +4,20 @@ import unittest
 from tornado import gen
 from tornado.testing import AsyncHTTPTestCase, AsyncTestCase, LogTrapTestCase
 
-class CouchDbAdapterTest(AsyncTestCase,LogTrapTestCase):
+
+class CouchDbAdapterTest(AsyncTestCase, LogTrapTestCase):
     def setUp(self):
-        super(CouchDbAdapterTest,self).setUp()
+        super(CouchDbAdapterTest, self).setUp()
         db_name = 'testdb'
+
         def callback(db, info):
             assert db is not None
             assert 'db_name' in info.keys()
             assert info['db_name'] == db_name
             self.db = db
             self.stop()
-        couchadapter.CouchDbAdapter(db_name,create=True, callback=callback, ioloop=self.io_loop)
+        couchadapter.CouchDbAdapter(
+            db_name, create=True, callback=callback, ioloop=self.io_loop)
         self.wait()
 
     def tearDown(self):
@@ -35,20 +38,20 @@ class CouchDbAdapterTest(AsyncTestCase,LogTrapTestCase):
                 self.stop()
             db.delete_db(delete_cb)
         db_name = 'testcreatedb'
-        couchadapter.CouchDbAdapter(db_name,create=True, callback=callback,
-                resource_path = "/home/steven/www/webapps/facebook/couchdb",
-                ioloop=self.io_loop)
+        couchadapter.CouchDbAdapter(db_name, create=True, callback=callback,
+                                    resource_path="/home/steven/www/webapps/facebook/couchdb",
+                                    ioloop=self.io_loop)
         self.wait()
-
 
     def test_sync_resources(self):
         db_name = 'facebook'
+
         def callback(db, info):
             print info
             self.stop()
-        couchadapter.CouchDbAdapter(db_name,create=True, callback=callback,
-                resource_path = "/home/steven/www/webapps/facebook/couchdb",
-                ioloop=self.io_loop)
+        couchadapter.CouchDbAdapter(db_name, create=True, callback=callback,
+                                    resource_path="/home/steven/www/webapps/facebook/couchdb",
+                                    ioloop=self.io_loop)
         self.wait()
 
 
