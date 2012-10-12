@@ -1,4 +1,5 @@
 from debug import debug as sj_debug
+import os
 import logging
 import tornado
 from tornado.options import options, define
@@ -31,20 +32,20 @@ def define_options(other_options=()):
         define(*opt)
 
 
-def parse_options():
+def parse_options(configpath):
     tornado.options.parse_command_line()
-    _configfile_ = "conf/production.conf"
+    _configfile_ = os.path.join(configpath, "production.conf")
     if options.testing:
-        _configfile_ = "conf/testing.conf"
+        _configfile_ = os.path.join(configpath, "testing.conf")
     elif options.debug:
-        _configfile_ = "conf/development.conf"
+        _configfile_ = os.path.join(configpath, "development.conf")
     tornado.options.parse_config_file(_configfile_)
     tornado.options.parse_command_line()
 
 
-def configure(other_options=()):
+def configure(configpath="conf", other_options=()):
     define_options(other_options)
-    parse_options()
+    parse_options(configpath)
 
     logging.basicConfig()
     #logging.getLogger().setLevel(logging.INFO)
