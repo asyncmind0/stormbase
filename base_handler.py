@@ -62,6 +62,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         self.db = self.application.db
         self.session = session.Session(self.application.session_manager, self)
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.render_method = kwargs.get('render_method', 'html')
 
     def get_current_user(self):
         userid = self.get_secure_cookie("user")
@@ -80,6 +81,13 @@ class StormBaseHandler(tornado.web.RequestHandler):
         kwargs['add_javascript'] = self.add_javascript
         kwargs['current_user'] = self.current_user
 
+    def end(self, *args, **kwargs):
+        if self.render_method == 'html':
+            return self.render(*args, **kwargs)
+        elif self.render_method == 'json':
+            return self.render_json(kwargs)
+        raise Exception("Unknown render_method:%s" % self.render_method)
+
     def render(self, template_name, finish=True, **kwargs):
         self._default_template_variables(kwargs)
         template = self.application.jinja_env.get_template(template_name)
@@ -92,8 +100,10 @@ class StormBaseHandler(tornado.web.RequestHandler):
         template = self.application.jinja_env.from_string(string_template)
         return template.render(**kwargs).strip()
 
-    def render_json(self, data):
-        return self.write(json.dumps(data, cls=JSONEncoder))
+    def render_json(self, data, finish=True):
+        self.write(json.dumps(data, cls=JSONEncoder))
+        if finish:
+            self.finish()
 
     def static_url(self, url):
         return urllib.basejoin(options.static_root, url)
