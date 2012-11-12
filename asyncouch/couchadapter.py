@@ -105,7 +105,7 @@ class CouchDbAdapter(couch.AsyncCouch):
             info.update(res)
         if resource_path:
             yield gen.Task(self.init_resources, resource_path)
-        callback(self, info)
+        callback(db=self, info=info)
 
     @gen.engine
     def init_resources(self, resource_path, callback):
@@ -170,7 +170,7 @@ def read(fname, utf8=True, force_read=False):
         try:
             with codecs.open(fname, 'rb', "utf-8") as f:
                 return f.read()
-        except UnicodeError, e:
+        except UnicodeError:
             if force_read:
                 return read(fname, utf8=False)
             raise

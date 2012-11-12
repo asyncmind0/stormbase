@@ -26,6 +26,8 @@ def define_options(other_options=()):
     define("site_name")
     define("static_root", default='/static/')
     define("script_root", default='/static/javascript')
+    define("vendor_script_root", default='/static/vendor/javascript')
+    define("vendor_css_root", default='/static/vendor/css')
     define("root")
     define("server_host")
     for opt in other_options:
