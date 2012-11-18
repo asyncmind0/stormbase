@@ -58,9 +58,10 @@ if proxy_url:
 
 class StormBaseHandler(tornado.web.RequestHandler):
     session = None
+
     def initialize(self, *args, **kwargs):
         self.db = self.application.db
-        if hasattr(self.application,'session_manager'):
+        if hasattr(self.application, 'session_manager'):
             self.session = session.Session(
                 self.application.session_manager, self)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -77,18 +78,17 @@ class StormBaseHandler(tornado.web.RequestHandler):
         return user_obj
 
     def _default_template_variables(self, kwargs):
+        kwargs['session'] = self.session
         kwargs['options'] = options
-        kwargs['static_url'] = self.static_url
-        kwargs['url'] = self.url
-        kwargs['xsrf_form_html'] = self.xsrf_form_html
+        kwargs['get_url'] = self.get_url
         kwargs['xsrf_token'] = self.xsrf_token
         kwargs['add_javascript'] = self.add_javascript
         kwargs['add_css'] = self.add_css
-        kwargs['current_user'] = self.current_user
+        kwargs.update(self.get_template_namespace())
 
     def end(self, *args, **kwargs):
         if self.render_method == 'html':
-            return self.render(*args, **kwargs)
+            return self.render(self.template or args[0], *args[1:], **kwargs)
         elif self.render_method == 'json':
             return self.render_json(kwargs)
         raise Exception("Unknown render_method:%s" % self.render_method)
@@ -113,7 +113,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
     def static_url(self, url):
         return urllib.basejoin(options.static_root, url)
 
-    def url(self, url):
+    def get_url(self, url):
         return urllib.basejoin(options.root, url)
 
     def add_css(self, css, cache=True, vendor=False, **kwargs):
@@ -190,7 +190,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
                              <body>
                                 <h2 class="error">Error</h2>
                                 <p>%s</p>
-                                <h2>Traceback</h2>
+                                <h2 id="traceback">Traceback</h2>
                                 <p>%s</p>
                                 <h2>Request Info</h2>
                                 <p>%s</p>
