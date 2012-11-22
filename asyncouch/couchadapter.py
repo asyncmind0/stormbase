@@ -35,6 +35,8 @@ class Document(dict):
         try:
             default = self.default
             type_keys = default.keys()
+            if value is None:
+                value = {}
             val_keys = value.keys()
             for tkey in type_keys:
                 if tkey in val_keys and value[tkey]:
@@ -47,7 +49,8 @@ class Document(dict):
                     value[tkey] = default[tkey]
             super(Document, self).__init__(value)
         except Exception as e:
-            trace()
+            logging.debug(e.message)
+            raise e
 
     @classmethod
     def add_defaults(cls, **kwargs):
@@ -69,15 +72,15 @@ def wrap_results(data, model=Document):
         elif 'rows' in data.keys():
             rows = data['rows']
             values = ViewResult([model(r['value']) for r in rows])
-            values.offset = data['offset']
+            values.offset = data.get('offset', 0)
             return values
         elif isinstance(data, dict):
             return model(data)
         else:
             raise Exception("Wierd results")
     except Exception as e:
-        trace()
-        raise e
+        logging.debug(e.message)
+        return data
 
 
 def wrap_callback(cb, model=Document):
