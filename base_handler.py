@@ -128,7 +128,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
                        else '?cacheid=%s' % CACHID)
         extra_params = ""
         for item in kwargs.iteritems():
-            extra_params += '"%s"="%s" ' % item
+            extra_params += '%s="%s" ' % item
         return """<link rel="stylesheet" href="%s%s" type="text/css" %s/>""" \
             % (path, cachestring, extra_params)
 
@@ -184,19 +184,20 @@ class StormBaseHandler(tornado.web.RequestHandler):
                                     for k in self.request.__dict__.keys()])
             error = exc_info[1]
 
-            self.set_header('Content-Type', 'text/html')
-            self.finish("""<html>
-                             <title>%s</title>
-                             <body>
-                                <h2 class="error">Error</h2>
-                                <p>%s</p>
-                                <h2 id="traceback">Traceback</h2>
-                                <p>%s</p>
-                                <h2>Request Info</h2>
-                                <p>%s</p>
-                             </body>
-                           </html>""" % (error, error,
-                                         trace_info, request_info))
+            self.render("error.html", error=error,
+                        trace_info=trace_info,
+                        request_info=request_info)
+
+
+class ErrorHandler(StormBaseHandler):
+    """Generates an error response with status_code for all requests."""
+    def __init__(self, application, request, status_code):
+        tornado.web.RequestHandler.__init__(self, application, request)
+        self.set_status(status_code)
+
+    def prepare(self):
+        raise tornado.web.HTTPError(self._status_code)
+
 
 
 def get_static_handlers():
