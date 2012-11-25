@@ -106,7 +106,7 @@ class CouchDbAdapter(couch.AsyncCouch):
             res = yield gen.Task(self.create_db)
             info = yield gen.Task(self.info_db)
             info.update(res)
-        if resource_path:
+        if resource_path and False:
             yield gen.Task(self.init_resources, resource_path)
         callback(db=self, info=info)
 
