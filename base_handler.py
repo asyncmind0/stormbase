@@ -58,6 +58,7 @@ if proxy_url:
 
 class StormBaseHandler(tornado.web.RequestHandler):
     session = None
+    params = {}
 
     def initialize(self, *args, **kwargs):
         self.db = self.application.db
@@ -66,6 +67,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
                 self.application.session_manager, self)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.render_method = kwargs.get('render_method', 'html')
+        self.params = kwargs
 
     def get_current_user(self):
         userid = self.get_secure_cookie("user")
@@ -77,6 +79,11 @@ class StormBaseHandler(tornado.web.RequestHandler):
             return None
         return user_obj
 
+    def is_admin(self):
+        return (True if self.current_user and
+                self.current_user.email in
+                options.admin_emails else False)
+
     def _default_template_variables(self, kwargs):
         kwargs['session'] = self.session
         kwargs['options'] = options
@@ -84,6 +91,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         kwargs['xsrf_token'] = self.xsrf_token
         kwargs['add_javascript'] = self.add_javascript
         kwargs['add_css'] = self.add_css
+        kwargs['is_admin'] = self.is_admin()
         kwargs.update(self.get_template_namespace())
 
     def end(self, *args, **kwargs):
@@ -197,7 +205,6 @@ class ErrorHandler(StormBaseHandler):
 
     def prepare(self):
         raise tornado.web.HTTPError(self._status_code)
-
 
 
 def get_static_handlers():
