@@ -19,6 +19,7 @@ def define_options(other_options=()):
     define("port", default=8000, help="run on the given port", type=int)
     define("debug", default=None, help="run in development mode", type=bool)
     define("testing", default=None, help="run in development mode", type=bool)
+    define("debug-html", default=None, help="show html debugging", type=bool)
     define("couchdb_user")
     define("couchdb_password")
     define("couchdb_uri")

@@ -183,18 +183,22 @@ class StormBaseHandler(tornado.web.RequestHandler):
 
     def write_error(self, status_code, **kwargs):
         import traceback
-        if self.settings.get("debug") and "exc_info" in kwargs:
-            exc_info = kwargs["exc_info"]
-            trace_info = ''.join(["%s<br/>" % line for line in
-                                  traceback.format_exception(*exc_info)])
-            request_info = ''.join(["<strong>%s</strong>: %s<br/>" %
-                                    (k, self.request.__dict__[k])
-                                    for k in self.request.__dict__.keys()])
-            error = exc_info[1]
+        exc_info = kwargs["exc_info"]
+        trace_info = ''.join(["%s<br/>" % line for line in
+                              traceback.format_exception(*exc_info)])
+        request_info = ''.join(["<strong>%s</strong>: %s<br/>" %
+                                (k, self.request.__dict__[k])
+                                for k in self.request.__dict__.keys()])
+        error = exc_info[1]
 
-            self.render("error.html", error=error,
-                        trace_info=trace_info,
-                        request_info=request_info)
+        def get_random_image():
+            return "/static/common/img/star-trek-II-the-wrath-of-khan.png"
+
+        self.render("error.html", error=error,
+                    status_code=status_code,
+                    get_random_image=get_random_image,
+                    trace_info=trace_info,
+                    request_info=request_info)
 
 
 class ErrorHandler(StormBaseHandler):
@@ -219,6 +223,8 @@ def get_static_handlers():
          {'path':os.path.join(cwd, 'src/javascript')}),
         (r'/static/vendor/(.*)', tornado.web.StaticFileHandler,
          {'path':os.path.join(cwd, '../../var/static/vendor')}),
+        (r'/static/common/(.*)$', tornado.web.StaticFileHandler,
+         {'path':os.path.join(cwd, '../../var/static')}),
         (r'/static/(.*)', tornado.web.StaticFileHandler,
          {'path':static_root}),
         (r'/favicon.ico(.*)', tornado.web.StaticFileHandler,

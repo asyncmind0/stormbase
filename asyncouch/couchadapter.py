@@ -62,7 +62,9 @@ class Document(dict):
 def wrap_results(data, model=Document):
     try:
         if not data:
-            return []
+            return None
+        elif isinstance(data, couch.NotFound):
+            return None
         elif isinstance(data, Exception):
             raise data
         elif isinstance(data, list):
