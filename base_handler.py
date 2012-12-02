@@ -87,6 +87,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
     def _default_template_variables(self, kwargs):
         kwargs['session'] = self.session
         kwargs['options'] = options
+        kwargs['settings'] = self.application.settings
         kwargs['get_url'] = self.get_url
         kwargs['xsrf_token'] = self.xsrf_token
         kwargs['add_javascript'] = self.add_javascript
@@ -190,13 +191,8 @@ class StormBaseHandler(tornado.web.RequestHandler):
                                 (k, self.request.__dict__[k])
                                 for k in self.request.__dict__.keys()])
         error = exc_info[1]
-
-        def get_random_image():
-            return "/static/common/img/star-trek-II-the-wrath-of-khan.png"
-
         self.render("error.html", error=error,
                     status_code=status_code,
-                    get_random_image=get_random_image,
                     trace_info=trace_info,
                     request_info=request_info)
 
