@@ -1,15 +1,14 @@
-from debug import debug as sj_debug
 import os
 import logging
 import tornado
 from tornado.options import options, define
-from tornado import httpclient
 
 
 class LogFilter(logging.Filter):
     def filter(self, rec):
-        if rec.module in ['httpclient', 'curl_httpclient'] and rec.levelno == logging.DEBUG:
-            return True
+        if rec.module in ['httpclient', 'curl_httpclient'] \
+                and rec.levelno == logging.DEBUG:
+            return False
         elif rec.msg == '/static/' and rec.levelno == logging.DEBUG:
             return False
         return True

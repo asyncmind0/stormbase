@@ -164,13 +164,20 @@ class StormBaseHandler(tornado.web.RequestHandler):
         except Exception, e:
             print "Error logging." + str(e)
 
-    def get_real_ip(self):
+    def get_real_ip(self, geolocate=True):
         try:
             self.real_ip = self.request.headers.get(
                 'X-Real-Ip',
                 self.request.headers.get('X-Forwarded-For', None))
             logging.info(
                 "Request from " + str(self.real_ip) + str(self.__class__))
+            if geolocate:
+                def handle_request(responses):
+                    logging.info(responses.body)
+                http_client = CurlAsyncHTTPClient()
+                http_client.fetch("http://freegeoip.net/json/%s" %
+                                  self.real_ip,
+                                  handle_request)
         except Exception, e:
             self.error(e)
 
