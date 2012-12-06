@@ -21,6 +21,8 @@ class Document(dict):
     default = {}
     """Makes a dictionary behave like an object."""
     def __getattr__(self, name):
+        if name.startswith("__") and hasattr(self, name):
+            return getattr(name)
         if name == 'doc_type':
             return  self.__class__.__name__
         try:
@@ -29,7 +31,10 @@ class Document(dict):
             raise AttributeError(name)
 
     def __setattr__(self, name, value):
-        self[name] = value
+        if name.startswith("__") and hasattr(self, name):
+            setattr(self, name, value)
+        else:
+            self[name] = value
 
     def __init__(self, value={}):
         try:
