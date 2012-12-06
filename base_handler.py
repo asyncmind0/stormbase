@@ -122,8 +122,10 @@ class StormBaseHandler(tornado.web.RequestHandler):
     def static_url(self, url):
         return urllib.basejoin(options.static_root, url)
 
-    def get_url(self, url):
-        return urllib.basejoin(options.root, url)
+    def get_url(self, url, full=False):
+        path = urllib.basejoin(options.root, url)
+        return ((self.request.protocol + '://' +
+                self.request.host + path) if full else path)
 
     def add_css(self, css, cache=True, vendor=False, **kwargs):
         if css.startswith('http'):
