@@ -1,4 +1,6 @@
 from babel.dates import format_datetime as babel_format_datetime
+from datetime import datetime
+import pretty
 
 
 def format_datetime(value, format='medium'):
@@ -6,6 +8,10 @@ def format_datetime(value, format='medium'):
         format = "EEEE, d. MMMM y 'at' HH:mm"
     elif format == 'medium':
         format = "EE dd.MM.y HH:mm"
+    elif format == 'pretty':
+        now = datetime.now()
+        delta = now - value
+        return pretty.date(now - delta)
     return babel_format_datetime(value, format)
 
 
