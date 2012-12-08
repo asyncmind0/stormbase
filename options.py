@@ -18,7 +18,7 @@ def define_options(other_options=()):
     define("port", default=8000, help="run on the given port", type=int)
     define("debug", default=None, help="run in development mode", type=bool)
     define("testing", default=None, help="run in development mode", type=bool)
-    define("debug-html", default=None, help="show html debugging", type=bool)
+    define("debug_html", default=None, help="show html debugging", type=bool)
     define("couchdb_user")
     define("couchdb_password")
     define("couchdb_uri")
@@ -37,10 +37,12 @@ def define_options(other_options=()):
 def parse_options(configpath):
     tornado.options.parse_command_line()
     _configfile_ = os.path.join(configpath, "production.conf")
+    _core_config_ = os.path.join(configpath, "core.conf")
     if options.testing:
         _configfile_ = os.path.join(configpath, "testing.conf")
     elif options.debug:
         _configfile_ = os.path.join(configpath, "development.conf")
+    tornado.options.parse_config_file(_core_config_)
     tornado.options.parse_config_file(_configfile_)
     tornado.options.parse_command_line()
 
