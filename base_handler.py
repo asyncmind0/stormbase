@@ -103,6 +103,10 @@ class StormBaseHandler(tornado.web.RequestHandler):
         elif self.render_method == 'string':
             return self.render_string_template(self.template_string or args[0],
                                                *args[1:], **kwargs)
+        elif hasattr(self, self.render_method):
+            render_method = getattr(self, self.render_method)
+            if hasattr(render_method, '__call__'):
+                return render_method(*args, **kwargs)
         raise Exception("Unknown render_method:%s" % self.render_method)
 
     def render(self, template_name, finish=True, **kwargs):
