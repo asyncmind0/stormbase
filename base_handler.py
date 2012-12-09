@@ -100,6 +100,9 @@ class StormBaseHandler(tornado.web.RequestHandler):
             return self.render(self.template or args[0], *args[1:], **kwargs)
         elif self.render_method == 'json':
             return self.render_json(kwargs)
+        elif self.render_method == 'string':
+            return self.render_string_template(self.template_string or args[0],
+                                               *args[1:], **kwargs)
         raise Exception("Unknown render_method:%s" % self.render_method)
 
     def render(self, template_name, finish=True, **kwargs):
@@ -109,10 +112,12 @@ class StormBaseHandler(tornado.web.RequestHandler):
         if finish:
             self.finish()
 
-    def render_string_template(self, string_template, **kwargs):
+    def render_string_template(self, string_template, finish=True, **kwargs):
         self._default_template_variables(kwargs)
         template = self.application.jinja_env.from_string(string_template)
-        return template.render(**kwargs).strip()
+        self.write(template.render(**kwargs).strip())
+        if finish:
+            self.finish()
 
     def render_json(self, data, finish=True):
         self.write(dump_json(data))
