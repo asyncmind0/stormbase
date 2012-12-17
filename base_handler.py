@@ -27,11 +27,10 @@ class ProxyCurlAsyncHTTPClient(CurlAsyncHTTPClient):
     fetch_args = None
 
     def initialize(self, io_loop=None, max_clients=10,
-                   max_simultaneous_connections=None, **kwargs):
+                   **kwargs):
         super(ProxyCurlAsyncHTTPClient, self).initialize(
             io_loop,
-            max_clients,
-            max_simultaneous_connections)
+            max_clients)
         self.fetch_args = kwargs
 
     def fetch(self, request, callback, **kwargs):
