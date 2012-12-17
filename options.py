@@ -44,12 +44,12 @@ def parse_options(configpath):
         _configfile_ = os.path.join(configpath, "development.conf")
     tornado.options.parse_config_file(_core_config_)
     tornado.options.parse_config_file(_configfile_)
-    tornado.options.parse_command_line()
+    return tornado.options.parse_command_line()
 
 
 def configure(configpath="conf", other_options=()):
     define_options(other_options)
-    parse_options(configpath)
+    retval = parse_options(configpath)
 
     logging.basicConfig()
     #logging.getLogger().setLevel(logging.INFO)
@@ -64,3 +64,4 @@ def configure(configpath="conf", other_options=()):
     logging.warning("Hello NiceDesign")
     logging.error("Hello NiceDesign")
     logging.critical("Hello NiceDesign")
+    return retval
