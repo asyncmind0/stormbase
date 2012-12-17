@@ -21,6 +21,8 @@ class Document(dict):
     default = {}
     """Makes a dictionary behave like an object."""
     def __getattr__(self, name):
+        if name.startswith("__") and hasattr(self, name):
+            return getattr(name)
         if name == 'doc_type':
             return  self.__class__.__name__
         try:
@@ -29,12 +31,17 @@ class Document(dict):
             raise AttributeError(name)
 
     def __setattr__(self, name, value):
-        self[name] = value
+        if name.startswith("__") and hasattr(self, name):
+            setattr(self, name, value)
+        else:
+            self[name] = value
 
     def __init__(self, value={}):
         try:
             default = self.default
             type_keys = default.keys()
+            if value is None:
+                value = {}
             val_keys = value.keys()
             for tkey in type_keys:
                 if tkey in val_keys and value[tkey]:
@@ -47,7 +54,8 @@ class Document(dict):
                     value[tkey] = default[tkey]
             super(Document, self).__init__(value)
         except Exception as e:
-            trace()
+            logging.debug(e.message)
+            raise e
 
     @classmethod
     def add_defaults(cls, **kwargs):
@@ -59,7 +67,9 @@ class Document(dict):
 def wrap_results(data, model=Document):
     try:
         if not data:
-            return []
+            return None
+        elif isinstance(data, couch.NotFound):
+            return None
         elif isinstance(data, Exception):
             raise data
         elif isinstance(data, list):
@@ -69,15 +79,15 @@ def wrap_results(data, model=Document):
         elif 'rows' in data.keys():
             rows = data['rows']
             values = ViewResult([model(r['value']) for r in rows])
-            values.offset = data['offset']
+            values.offset = data.get('offset', 0)
             return values
         elif isinstance(data, dict):
             return model(data)
         else:
             raise Exception("Wierd results")
     except Exception as e:
-        trace()
-        raise e
+        logging.debug(e.message)
+        return data
 
 
 def wrap_callback(cb, model=Document):
@@ -103,9 +113,9 @@ class CouchDbAdapter(couch.AsyncCouch):
             res = yield gen.Task(self.create_db)
             info = yield gen.Task(self.info_db)
             info.update(res)
-        if resource_path:
+        if resource_path and False:
             yield gen.Task(self.init_resources, resource_path)
-        callback(self, info)
+        callback(db=self, info=info)
 
     @gen.engine
     def init_resources(self, resource_path, callback):
@@ -170,7 +180,7 @@ def read(fname, utf8=True, force_read=False):
         try:
             with codecs.open(fname, 'rb', "utf-8") as f:
                 return f.read()
-        except UnicodeError, e:
+        except UnicodeError:
             if force_read:
                 return read(fname, utf8=False)
             raise

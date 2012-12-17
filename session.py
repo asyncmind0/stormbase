@@ -8,6 +8,7 @@ import hmac
 import uuid
 import hashlib
 import pylibmc
+import logging
 
 
 class SessionData(dict):
@@ -52,7 +53,8 @@ class SessionManager(object):
                 return session_data
             else:
                 return {}
-        except IOError:
+        except IOError as e:
+            logging.exception(e)
             return {}
 
     def get(self, request_handler=None):
