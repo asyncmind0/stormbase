@@ -161,8 +161,10 @@ class StormBaseHandler(tornado.web.RequestHandler):
             path = urllib.basejoin(options.script_root, script)
         cachestring = ('' if cache or not options.debug
                        else '?cacheid=%s' % CACHID)
-        return """<script src="%s%s" type="text/javascript"></script>""" \
-            % (path, cachestring)
+        kwargs = " ".join(map(lambda x: "%s=\"%s\"" % x, kwargs.items()))
+        kwargs = kwargs.replace("_", "-")
+        return """<script src="%s%s" %s type="text/javascript"></script>""" \
+            % (path, cachestring, kwargs)
 
     #def get_error_html(self, status_code, **kwargs):
     #    self.render('error.html', status_code=status_code,
