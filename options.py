@@ -43,7 +43,8 @@ def parse_options(configpath):
     elif options.debug:
         _configfile_ = os.path.join(configpath, "development.conf")
     tornado.options.parse_config_file(_core_config_)
-    tornado.options.parse_config_file(_configfile_)
+    if os.path.exists(_configfile_):
+        tornado.options.parse_config_file(_configfile_)
     return tornado.options.parse_command_line()
 
 

@@ -10,7 +10,7 @@ from uuid import uuid4
 from debug import debug, trace
 from tornado import gen
 
-from stormbase.util import JSONEncoder
+from util import JSONEncoder
 
 
 class ViewResult(list):
@@ -21,8 +21,9 @@ class Document(dict):
     default = {}
     """Makes a dictionary behave like an object."""
     def __getattr__(self, name):
-        if name.startswith("__") and hasattr(self, name):
-            return getattr(name)
+        if name[0] == '_' and name[1] == '_' and \
+                hasattr(super(Document, self), name):
+            return getattr(super(Document, self), name)
         if name == 'doc_type':
             return  self.__class__.__name__
         try:
@@ -78,9 +79,12 @@ def wrap_results(data, model=Document):
             return values
         elif 'rows' in data.keys():
             rows = data['rows']
-            values = ViewResult([model(r['value']) for r in rows])
-            values.offset = data.get('offset', 0)
-            return values
+            values = map(lambda x: x['value'], rows)
+            if values and isinstance(values[0], dict):
+                values = ViewResult(map(model, values))
+                values.offset = data.get('offset', 0)
+                data['rows'] = values
+            return data
         elif isinstance(data, dict):
             return model(data)
         else:
@@ -99,9 +103,11 @@ def wrap_callback(cb, model=Document):
 
 class CouchDbAdapter(couch.AsyncCouch):
     def __init__(self, db_name, create=True, callback=None, host='localhost',
-                 resource_path=None, port=5984, ioloop=None, username=None, password=None):
-        super(CouchDbAdapter, self).__init__(db_name, host=host, port=port,
-                                             username=username, password=password, ioloop=ioloop)
+                 resource_path=None, port=5984, ioloop=None, username=None,
+                 password=None):
+        super(CouchDbAdapter, self).__init__(
+            db_name, host=host, port=port, username=username,
+            password=password, ioloop=ioloop)
         self.initialize(callback, create, resource_path)
 
     @gen.engine
@@ -111,9 +117,11 @@ class CouchDbAdapter(couch.AsyncCouch):
             if not create:
                 raise info
             res = yield gen.Task(self.create_db)
+            if isinstance(res, Exception):
+                raise res
             info = yield gen.Task(self.info_db)
             info.update(res)
-        if resource_path and False:
+        if resource_path:
             yield gen.Task(self.init_resources, resource_path)
         callback(db=self, info=info)
 
@@ -123,38 +131,26 @@ class CouchDbAdapter(couch.AsyncCouch):
         TODO: remove deleted views
         """
         _design = os.path.join(resource_path, '_design')
-        resources = {}
+        models = []
+        try:
 
-        def cb(arg, dirname, fname):
-            if fname[0] in ['map.js', 'reduce.js']:
-                key = '_design' + '/' + dirname.rsplit(os.path.sep, 3)[1]
-                viewname = dirname.rsplit(os.path.sep, 3)[3]
-                views = resources.get(key, [])
-                views.append((viewname, os.path.join(dirname, fname[0])))
-                resources[key] = views
-        os.path.walk(_design, cb, None)
-        docs = []
-
-        for key in resources.keys():
-            url = ''.join(['/', self.db_name, '/', key])
-            doc = yield gen.Task(self._http_get, url)
-            doc = doc if isinstance(doc, dict) else {'_id': key}
-            for k, v in resources[key]:
-                if v.endswith('map.js'):
-                    vtype = 'map'
-                elif v.endswith('reduce.js'):
-                    vtype = 'reduce'
-                views = doc.get('views', {})
-                views[k] = {vtype: read(v)}
-                doc['views'] = views
-            docs.append(doc)
-        yield gen.Task(self.save_docs, docs)
+            def cb(arg, dirname, fname):
+                if fname[0] in ['map.js', 'reduce.js']:
+                    models.append(dirname.rsplit(os.path.sep, 3)[1])
+            os.path.walk(_design, cb, None)
+            map(lambda x: os.system(
+                    "couchapp push {0}/{1} {2}/{3}".format(
+                        _design, x, self.couch_url, self.db_name)), set(models))
+        except Exception as e:
+            logging.error("Failed to init_resources. %s", e)
 
         callback()
 
-    def view(self, design_doc_name, view_name, callback=None, model=Document, **kwargs):
-        super(CouchDbAdapter, self).view(design_doc_name,
-                                         view_name, wrap_callback(callback, model), **kwargs)
+    def view(self, design_doc_name, view_name, callback=None,
+             model=Document, **kwargs):
+        super(CouchDbAdapter, self).view(
+            design_doc_name, view_name, wrap_callback(callback, model),
+            **kwargs)
 
     def get_doc(self, doc_id, model=Document, callback=None):
         super(CouchDbAdapter, self).get_doc(doc_id, wrap_callback(
