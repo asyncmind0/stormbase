@@ -66,32 +66,28 @@ class Document(dict):
 
 
 def wrap_results(data, model=Document):
-    try:
-        if not data:
-            return None
-        elif isinstance(data, couch.NotFound):
-            return None
-        elif isinstance(data, Exception):
-            raise data
-        elif isinstance(data, list):
-            data = filter(lambda x: x, data)
-            values = ViewResult([model(r) for r in data])
-            return values
-        elif 'rows' in data.keys():
-            rows = data['rows']
-            values = map(lambda x: x['value'], rows)
-            if values and isinstance(values[0], dict):
-                values = ViewResult(map(model, values))
-                values.offset = data.get('offset', 0)
-                data['rows'] = values
-            return data
-        elif isinstance(data, dict):
-            return model(data)
-        else:
-            raise Exception("Wierd results")
-    except Exception as e:
-        logging.debug(e.message)
+    if not data:
+        return None
+    elif isinstance(data, couch.NotFound):
+        return None
+    elif isinstance(data, Exception):
+        raise data
+    elif isinstance(data, list):
+        data = filter(lambda x: x, data)
+        values = ViewResult([model(r) for r in data])
+        return values
+    elif 'rows' in data.keys():
+        rows = data['rows']
+        values = map(lambda x: x['value'], rows)
+        if values and isinstance(values[0], dict):
+            values = ViewResult(map(model, values))
+            values.offset = data.get('offset', 0)
+            data['rows'] = values
         return data
+    elif isinstance(data, dict):
+        return model(data)
+    else:
+        raise Exception("Wierd results")
 
 
 def wrap_callback(cb, model=Document):
@@ -125,7 +121,6 @@ class CouchDbAdapter(couch.AsyncCouch):
             yield gen.Task(self.init_resources, resource_path)
         callback(db=self, info=info)
 
-    @gen.engine
     def init_resources(self, resource_path, callback):
         """ loads views into db
         TODO: remove deleted views
@@ -138,9 +133,9 @@ class CouchDbAdapter(couch.AsyncCouch):
                 if fname[0] in ['map.js', 'reduce.js']:
                     models.append(dirname.rsplit(os.path.sep, 3)[1])
             os.path.walk(_design, cb, None)
-            map(lambda x: os.system(
-                    "couchapp push {0}/{1} {2}/{3}".format(
-                        _design, x, self.couch_url, self.db_name)), set(models))
+            couchapp_cmd = "couchapp push {0}/{1} {2}/{3}".format(
+                _design, "%s", self.couch_url, self.db_name)
+            map(lambda x: os.system(couchapp_cmd % x), set(models))
         except Exception as e:
             logging.error("Failed to init_resources. %s", e)
 

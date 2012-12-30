@@ -9,8 +9,8 @@ from debug import debug as sj_debug
 #Clone this repository (size: 14.4 KB): HTTPS / SSH
 #hg clone https://bitbucket.org/nephics/tornado-couchdb
 
-from tornado import httpclient
-from tornado.escape import json_decode, json_encode, url_escape
+from tornado import curl_httpclient as httpclient
+from tornado.escape import json_decode, url_escape
 
 
 class Couch(object):
@@ -22,7 +22,7 @@ class BlockingCouch(Couch):
 
     def __init__(self, db_name, host='localhost', port=5984):
         self.couch_url = 'http://{0}:{1}'.format(host, port)
-        self.client = httpclient.HTTPClient()
+        self.client = httpclient.CurlHTTPClient()
         self.db_name = db_name
 
     # Database operations
@@ -332,7 +332,7 @@ class AsyncCouch(Couch):
                 username, password, host, port)
         else:
             self.couch_url = 'http://{0}:{1}'.format(host, port)
-        self.client = httpclient.AsyncHTTPClient(ioloop)
+        self.client = httpclient.CurlAsyncHTTPClient(ioloop)
         self.db_name = db_name
 
     # Database operations

@@ -73,7 +73,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         user_obj = None
         if self.session:
             user_obj = self.session.get(userid, None)
-        logging.debug("LOGINSTATUS: %s, %s" % (userid, user_obj is not None))
+        #logging.debug("LOGINSTATUS: %s, %s" % (userid, user_obj is not None))
         if not userid or not user_obj:
             return None
         return user_obj
