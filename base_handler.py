@@ -15,6 +15,8 @@ from tornado.curl_httpclient import CurlAsyncHTTPClient
 from urlparse import urlparse
 from tornado.httpclient import AsyncHTTPClient
 from tornado import stack_context
+               
+from renderers import MustacheRenderer, JinjaRenderer
 
 CACHID = time()
 
@@ -66,6 +68,9 @@ class StormBaseHandler(tornado.web.RequestHandler):
                 self.application.session_manager, self)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.render_method = kwargs.get('render_method', 'html')
+        render_engine = kwargs.get('render_engine', 'jinja')
+        self.render_engine = JinjaRenderer(self.application.jinja_env) \
+            if render_engine == 'jinja' else MustacheRenderer() 
         self.params = kwargs
 
     def get_current_user(self):
@@ -110,15 +115,14 @@ class StormBaseHandler(tornado.web.RequestHandler):
 
     def render(self, template_name, finish=True, **kwargs):
         self._default_template_variables(kwargs)
-        template = self.application.jinja_env.get_template(template_name)
-        self.write(template.render(kwargs))
+        self.write(self.render_engine.render(template_name, **kwargs))
         if finish:
             self.finish()
 
     def render_string_template(self, string_template, finish=True, **kwargs):
         self._default_template_variables(kwargs)
-        template = self.application.jinja_env.from_string(string_template)
-        self.write(template.render(**kwargs).strip())
+        self.write(self.render_engine.render_string_template(
+                string_template, **kwargs)
         if finish:
             self.finish()
 
