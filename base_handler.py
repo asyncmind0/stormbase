@@ -9,16 +9,12 @@ import os
 
 from tornado import gen
 from tornado import web
-from time import time
 from stormbase.util import dump_json
 from tornado.curl_httpclient import CurlAsyncHTTPClient
 from urlparse import urlparse
 from tornado.httpclient import AsyncHTTPClient
 from tornado import stack_context
-               
 from renderers import MustacheRenderer, JinjaRenderer
-
-CACHID = time()
 
 
 def async_engine(func):
@@ -69,8 +65,9 @@ class StormBaseHandler(tornado.web.RequestHandler):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.render_method = kwargs.get('render_method', 'html')
         render_engine = kwargs.get('render_engine', 'jinja')
-        self.render_engine = JinjaRenderer(self.application.jinja_env) \
-            if render_engine == 'jinja' else MustacheRenderer() 
+        self.render_engine = JinjaRenderer(self, self.application.jinja_env) \
+            if render_engine == 'jinja' else MustacheRenderer(
+            self, [self.application.settings['template_path']])
         self.params = kwargs
 
     def get_current_user(self):
@@ -94,8 +91,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         kwargs['settings'] = self.application.settings
         kwargs['get_url'] = self.get_url
         kwargs['xsrf_token'] = self.xsrf_token
-        kwargs['add_javascript'] = self.add_javascript
-        kwargs['add_css'] = self.add_css
+        kwargs['xsrf_form_html'] = self.xsrf_form_html()
         kwargs['is_admin'] = self.is_admin()
         kwargs.update(self.get_template_namespace())
 
@@ -122,7 +118,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
     def render_string_template(self, string_template, finish=True, **kwargs):
         self._default_template_variables(kwargs)
         self.write(self.render_engine.render_string_template(
-                string_template, **kwargs)
+                string_template, **kwargs))
         if finish:
             self.finish()
 
@@ -139,40 +135,9 @@ class StormBaseHandler(tornado.web.RequestHandler):
         return ((self.request.protocol + '://' +
                 self.request.host + path) if full else path)
 
-    def add_css(self, css, cache=True, vendor=False, **kwargs):
-        if css.startswith('http'):
-            path = css
-        elif vendor:
-            path = urllib.basejoin(options.vendor_css_root, css)
-        else:
-            path = urllib.basejoin(options.static_root, 'css/')
-            path = urllib.basejoin(path, css)
-        cachestring = ('' if cache or not options.debug
-                       else '?cacheid=%s' % CACHID)
-        extra_params = ""
-        for item in kwargs.iteritems():
-            extra_params += '%s="%s" ' % item
-        return """<link rel="stylesheet" href="%s%s" type="text/css" %s/>""" \
-            % (path, cachestring, extra_params)
-
-    def add_javascript(self, script, cache=True, vendor=False, **kwargs):
-        if script.startswith('http'):
-            path = script
-        elif vendor:
-            path = urllib.basejoin(options.vendor_script_root, script)
-        else:
-            path = urllib.basejoin(options.script_root, script)
-        cachestring = ('' if cache or not options.debug
-                       else '?cacheid=%s' % CACHID)
-        kwargs = " ".join(map(lambda x: "%s=\"%s\"" % x, kwargs.items()))
-        kwargs = kwargs.replace("_", "-")
-        return """<script src="%s%s" %s type="text/javascript"></script>""" \
-            % (path, cachestring, kwargs)
-
     #def get_error_html(self, status_code, **kwargs):
     #    self.render('error.html', status_code=status_code,
     #        message=httplib.responses[status_code])
-
     def error(self, exception):
         try:
             logging.error("Handler Exception:  %s." % str(exception))
@@ -214,10 +179,11 @@ class StormBaseHandler(tornado.web.RequestHandler):
                                 (k, self.request.__dict__[k])
                                 for k in self.request.__dict__.keys()])
         error = exc_info[1]
-        self.render("error.html", error=error,
-                    status_code=status_code,
-                    trace_info=trace_info,
-                    request_info=request_info)
+        self.write(self.render_engine.render_error(error=error,
+                                                   status_code=status_code,
+                                                   trace_info=trace_info,
+                                                   request_info=request_info))
+        self.finish()
 
 
 class ErrorHandler(StormBaseHandler):

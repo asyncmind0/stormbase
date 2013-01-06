@@ -2,10 +2,11 @@ from diff_match_patch import diff_match_patch as dmp
 from uuid import uuid4
 from datetime import datetime
 from couchadapter import Document
+from stormbase.tuct import tuct
 
 
 class Diff(Document):
-    default = Document.add_defaults(
+    defaults = tuct(
         original_docid='',
         date=datetime.utcnow())
 

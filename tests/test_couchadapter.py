@@ -73,8 +73,14 @@ class CouchDbAdapterTest(AsyncTestCase, LogTrapTestCase):
         print "save", document
 
         def save_cb(doc):
+            print doc
             assert doc['ok'] is True
             self.stop()
+        self.db.save_doc(document, save_cb)
+        self.wait()
+        print document._values_dict
+        prev_rev = document._rev
+        document.string_attr = "updated"
         self.db.save_doc(document, save_cb)
         self.wait()
 
@@ -82,7 +88,8 @@ class CouchDbAdapterTest(AsyncTestCase, LogTrapTestCase):
             print "get", doc
             for key, value in doc.items():
                 if key == '_rev':
-                    assert value != document.get(key, '')
+                    assert value != prev_rev, \
+                        "revision not updated"
                 else:
                     assert value == document[key]
             self.stop()
