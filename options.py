@@ -30,6 +30,8 @@ def define_options(other_options=()):
     define("vendor_css_root", default='/static/vendor/css')
     define("root")
     define("server_host")
+    define("cookie_secret")
+    define("session_secret")
     for opt in other_options:
         define(*opt)
 
