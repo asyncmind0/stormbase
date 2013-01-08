@@ -16,9 +16,6 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado import stack_context
 from renderers import MustacheRenderer, JinjaRenderer
 
-## override the tornado.web.ErrorHandler with our default ErrorHandler
-tornado.web.ErrorHandler = ErrorHandler
-
 
 def async_engine(func):
     return web.asynchronous(gen.engine(func))
@@ -178,8 +175,6 @@ class StormBaseHandler(tornado.web.RequestHandler):
         self.finish()
 
 
-
-
 class ErrorHandler(StormBaseHandler):
     """Generates an error response with status_code for all requests."""
     def __init__(self, application, request, status_code):
@@ -188,6 +183,9 @@ class ErrorHandler(StormBaseHandler):
 
     def prepare(self):
         raise tornado.web.HTTPError(self._status_code)
+
+## override the tornado.web.ErrorHandler with our default ErrorHandler
+tornado.web.ErrorHandler = ErrorHandler
 
 
 def get_static_handlers():

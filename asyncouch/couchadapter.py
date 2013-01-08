@@ -1,13 +1,8 @@
-from debug import shell, debug as sj_debug
 import os
-import re
 import codecs
 import logging
-from datetime import datetime
 import json
-import dateutil.parser
 from uuid import uuid4
-from debug import debug, trace
 from tornado import gen
 
 import couch

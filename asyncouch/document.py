@@ -1,3 +1,6 @@
+import dateutil
+import dateutil.parser
+from datetime import datetime
 from collections import MutableMapping
 
 
@@ -66,4 +69,3 @@ class Document(MutableMapping):
         #    if key not in value:
         #        value[key] = default[key]
         self._data_ = value
-
