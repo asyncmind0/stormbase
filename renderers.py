@@ -12,9 +12,8 @@ class BaseRenderer(object):
         self.handler = handler
 
     def _default_template_variables(self, kwargs):
-        kwargs['add_javascript'] = self.add_javascript
-        kwargs['add_css'] = self.add_css
         kwargs['request_uri'] = self.handler.request.uri
+        kwargs['is_admin'] = self.is_admin()
 
     def add_css(self, css="", cache=True, vendor=False, **kwargs):
         if css.startswith('http'):
@@ -52,6 +51,10 @@ class MustacheRenderer(BaseRenderer):
         super(MustacheRenderer, self).__init__(handler)
         self.renderer = pystache.Renderer(search_dirs=search_dirs)
 
+    def _default_template_variables(self, kwargs):
+        super(MustacheRenderer, self)._default_template_variables(kwargs)
+        kwargs['xsrf_form_html'] = self.xsrf_form_html()
+
     def add_options_variables(self, kwargs):
         kwargs['class_options_debug_html'] = 'debug' \
             if options.debug_html else ''
@@ -64,7 +67,7 @@ class MustacheRenderer(BaseRenderer):
         return pystache.render(string_template, kwargs)
 
     def render(self, template_name, context=None, **kwargs):
-        #template_name = "".join(template_name.split('.')[:-1])
+        # template_name = "".join(template_name.split('.')[:-1])
         self._default_template_variables(kwargs)
         self.add_options_variables(kwargs)
         kwargs['block_css'] = self.block_css
@@ -98,6 +101,18 @@ class JinjaRenderer(BaseRenderer):
     def __init__(self, handler, jinja_env):
         super(JinjaRenderer, self).__init__(handler)
         self.jinja_env = jinja_env
+
+    def _default_template_variables(self, kwargs):
+        super(JinjaRenderer, self)._default_template_variables(kwargs)
+        kwargs['add_javascript'] = self.add_javascript
+        kwargs['add_css'] = self.add_css
+        kwargs['session'] = self.session
+        kwargs['options'] = options
+        kwargs['settings'] = self.application.settings
+        kwargs['get_url'] = self.get_url
+        kwargs['xsrf_token'] = self.xsrf_token
+        kwargs['xsrf_form_html'] = self.xsrf_form_html
+        kwargs.update(self.get_template_namespace())
 
     def render(self, template_name, **kwargs):
         self._default_template_variables(kwargs)

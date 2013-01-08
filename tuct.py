@@ -17,7 +17,7 @@ class tuct(object):
         if len(kwds):
             self.__data.update(kwds)
 
-    #del __init__
+    # del __init__
 
     def __repr__(self):
         return repr(self.__data)

@@ -16,6 +16,9 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado import stack_context
 from renderers import MustacheRenderer, JinjaRenderer
 
+## override the tornado.web.ErrorHandler with our default ErrorHandler
+tornado.web.ErrorHandler = ErrorHandler
+
 
 def async_engine(func):
     return web.asynchronous(gen.engine(func))
@@ -67,7 +70,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         render_engine = kwargs.get('render_engine', 'jinja')
         self.render_engine = JinjaRenderer(self, self.application.jinja_env) \
             if render_engine == 'jinja' else MustacheRenderer(
-            self, [self.application.settings['template_path']])
+                self, [self.application.settings['template_path']])
         self.params = kwargs
 
     def get_current_user(self):
@@ -75,7 +78,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         user_obj = None
         if self.session:
             user_obj = self.session.get(userid, None)
-        #logging.debug("LOGINSTATUS: %s, %s" % (userid, user_obj is not None))
+        # logging.debug("LOGINSTATUS: %s, %s" % (userid, user_obj is not None))
         if not userid or not user_obj:
             return None
         return user_obj
@@ -84,16 +87,6 @@ class StormBaseHandler(tornado.web.RequestHandler):
         return (True if self.current_user and
                 self.current_user.email in
                 options.admin_emails else False)
-
-    def _default_template_variables(self, kwargs):
-        kwargs['session'] = self.session
-        kwargs['options'] = options
-        kwargs['settings'] = self.application.settings
-        kwargs['get_url'] = self.get_url
-        kwargs['xsrf_token'] = self.xsrf_token
-        kwargs['xsrf_form_html'] = self.xsrf_form_html()
-        kwargs['is_admin'] = self.is_admin()
-        kwargs.update(self.get_template_namespace())
 
     def end(self, *args, **kwargs):
         if self.render_method == 'html':
@@ -110,14 +103,13 @@ class StormBaseHandler(tornado.web.RequestHandler):
         raise Exception("Unknown render_method:%s" % self.render_method)
 
     def render(self, template_name, finish=True, **kwargs):
-        self._default_template_variables(kwargs)
         self.write(self.render_engine.render(template_name, **kwargs))
         if finish:
             self.finish()
 
     def render_string_template(self, string_template, finish=True, **kwargs):
-        self._default_template_variables(kwargs)
-        self.write(self.render_engine.render_string_template(
+        self.write(
+            self.render_engine.render_string_template(
                 string_template, **kwargs))
         if finish:
             self.finish()
@@ -135,7 +127,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         return ((self.request.protocol + '://' +
                 self.request.host + path) if full else path)
 
-    #def get_error_html(self, status_code, **kwargs):
+    # def get_error_html(self, status_code, **kwargs):
     #    self.render('error.html', status_code=status_code,
     #        message=httplib.responses[status_code])
     def error(self, exception):
@@ -186,6 +178,8 @@ class StormBaseHandler(tornado.web.RequestHandler):
         self.finish()
 
 
+
+
 class ErrorHandler(StormBaseHandler):
     """Generates an error response with status_code for all requests."""
     def __init__(self, application, request, status_code):
@@ -205,13 +199,13 @@ def get_static_handlers():
 
     return [
         (r'/static/js/(.*)', tornado.web.StaticFileHandler,
-         {'path':os.path.join(cwd, 'src/javascript')}),
+         {'path': os.path.join(cwd, 'src/javascript')}),
         (r'/static/vendor/(.*)', tornado.web.StaticFileHandler,
-         {'path':os.path.join(cwd, '../../var/static/vendor')}),
+         {'path': os.path.join(cwd, '../../var/static/vendor')}),
         (r'/static/common/(.*)$', tornado.web.StaticFileHandler,
-         {'path':os.path.join(cwd, '../../var/static')}),
+         {'path': os.path.join(cwd, '../../var/static')}),
         (r'/static/(.*)', tornado.web.StaticFileHandler,
-         {'path':static_root}),
+         {'path': static_root}),
         (r'/favicon.ico(.*)', tornado.web.StaticFileHandler,
-         {'path':os.path.join(static_root, 'img/favicon.ico')})
-        ]
+         {'path': os.path.join(static_root, 'img/favicon.ico')})
+    ]

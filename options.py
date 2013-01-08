@@ -53,11 +53,11 @@ def configure(configpath="conf", other_options=()):
     retval = parse_options(configpath)
 
     logging.basicConfig()
-    #logging.getLogger().setLevel(logging.INFO)
-    #logging.getLogger('httpclient').setLevel(logging.DEBUG)
-    #logging.getLogger('tornado.httpclient').setLevel(logging.INFO)
-    #logging.getLogger().addFilter(logging.Filter('httpclient'))
-    #logging.getLogger().addHandler(LogHandler())
+    # logging.getLogger().setLevel(logging.INFO)
+    # logging.getLogger('httpclient').setLevel(logging.DEBUG)
+    # logging.getLogger('tornado.httpclient').setLevel(logging.INFO)
+    # logging.getLogger().addFilter(logging.Filter('httpclient'))
+    # logging.getLogger().addHandler(LogHandler())
     logging.getLogger().addFilter(LogFilter())
 
     logging.debug("Hello NiceDesign")
