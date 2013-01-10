@@ -8,6 +8,7 @@ import tornado.testing
 TEST_MODULES = [
     #'test_asynccouch',
     'test_couchadapter',
+    'test_couchversions',
 ]
 
 

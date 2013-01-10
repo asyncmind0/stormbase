@@ -5,12 +5,13 @@ import unittest
 from tornado.options import options
 from asyncouch.couchadapter import Document
 from tornado.testing import AsyncTestCase, LogTrapTestCase
+from tuct import tuct
 
 
 class TestDocument(Document):
     """Base User objext
     """
-    default = Document.add_defaults(
+    defaults = tuct(
         string_attr="",
         list_attr=[],
         int_attr=0,
@@ -78,7 +79,6 @@ class CouchDbAdapterTest(AsyncTestCase, LogTrapTestCase):
             self.stop()
         self.db.save_doc(document, save_cb)
         self.wait()
-        print document._values_dict
         prev_rev = document._rev
         document.string_attr = "updated"
         self.db.save_doc(document, save_cb)

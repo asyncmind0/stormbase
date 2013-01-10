@@ -30,12 +30,12 @@ class Document(MutableMapping):
         if name == 'doc_type':
             return self.__class__.__name__
         if name == '_data_' or name.startswith("__"):
-            return object.__getattr__(self, name)
+            return super(Document,self).__getattr__(self, name)
         values_dict = self._data_
         if name in values_dict:
             return values_dict[name]
         else:
-            return object.__getattr__(self, name)
+            return getattr(super(Document, self), name)
 
     def __setattr__(self, name, value):
         if name == '_data_' or name.startswith("__"):

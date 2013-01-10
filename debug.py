@@ -8,7 +8,9 @@ ultratrace = ultratb.VerboseTB()
 # sys.excepthook = ultratrace
 from IPython.core.debugger import Tracer
 
-debug = Tracer('Linux')
+import pudb
+#debug = Tracer('Linux')
+debug = pudb.set_trace
 
 
 def trace():
