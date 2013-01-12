@@ -6,10 +6,12 @@ import urllib
 import logging
 import traceback
 import os
+import marshal
+import pylibmc
 
 from tornado import gen
 from tornado import web
-from stormbase.util import dump_json
+from stormbase.util import dump_json, load_json
 from tornado.curl_httpclient import CurlAsyncHTTPClient
 from urlparse import urlparse
 from tornado.httpclient import AsyncHTTPClient
@@ -134,6 +136,25 @@ class StormBaseHandler(tornado.web.RequestHandler):
         except Exception, e:
             print "Error logging." + str(e)
 
+    def memcache_set(self, key, value, expiry=0, compress=0):
+        _data = marshal.dumps(value)
+        mc = pylibmc.Client(options.memcached_addresses, binary=True)
+        mc.set(key, _data, expiry, compress)
+
+    def memcache_get(self, key):
+        try:
+            mc = pylibmc.Client(options.memcached_addresses)
+            _data = raw_data = mc.get(key)
+            if raw_data is not None:
+                _data = marshal.loads(raw_data)
+            if isinstance(_data, type({})):
+                return _data
+            else:
+                return {}
+        except IOError as e:
+            logging.exception(e)
+            return {}
+
     def get_real_ip(self, geolocate=True):
         try:
             self.real_ip = self.request.headers.get(
@@ -142,12 +163,19 @@ class StormBaseHandler(tornado.web.RequestHandler):
             logging.info(
                 "Request from " + str(self.real_ip) + str(self.__class__))
             if geolocate:
-                def handle_request(responses):
-                    logging.info(responses.body)
-                http_client = CurlAsyncHTTPClient()
-                http_client.fetch("http://freegeoip.net/json/%s" %
-                                  self.real_ip,
-                                  handle_request)
+                geo_key = "geo_%s" % self.real_ip
+                cached_geo = self.memcache_get(geo_key)
+                if cached_geo:
+                    logging.info(cached_geo)
+                else:
+                    def handle_request(responses):
+                        geo = load_json(responses.body)
+                        self.memcache_set(geo_key, geo)
+                        logging.info(geo)
+                    http_client = CurlAsyncHTTPClient()
+                    http_client.fetch("http://freegeoip.net/json/%s" %
+                                      self.real_ip,
+                                      handle_request)
         except Exception, e:
             self.error(e)
 
