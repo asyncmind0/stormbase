@@ -1,8 +1,9 @@
 from stormbase.util import load_json
 from tornado.options import options
-import pystache
 import urllib
 from time import time
+import pickle
+import logging
 
 CACHID = time()
 
@@ -45,11 +46,80 @@ class BaseRenderer(object):
         return """<script src="%s%s" %s type="text/javascript"></script>""" \
             % (path, cachestring, kwargs)
 
+from pystache import Renderer as PystacheRenderer
+from pystache.renderengine import RenderEngine as PystacheRenderEngine
+from pystache.parser import parse
+from pystache.parsed import ParsedTemplate
+from pystache.context import ContextStack
+
+
+class CachedRenderEngine(PystacheRenderEngine):
+    def render(self, parsed_template, context_stack, delimiters=None):
+        if isinstance(parsed_template, ParsedTemplate):
+            return parsed_template.render(self, context_stack)
+        else:
+            return super(CachedRenderEngine, self).render(
+                parsed_template, context_stack)
+
+
+class CachedRenderer(PystacheRenderer):
+    mc = None
+
+    def __init__(self, memcached_client, *args, **kwargs):
+        super(CachedRenderer, self).__init__(*args, **kwargs)
+        self.mc = memcached_client
+
+    def memcache_set(self, key, value, expiry=0, compress=0):
+        _data = pickle.dumps(value)
+        self.mc.set(key, _data, expiry, compress)
+
+    def memcache_get(self, key):
+        try:
+            _data = raw_data = self.mc.get(key)
+            if raw_data is not None:
+                _data = pickle.loads(raw_data)
+            return _data
+        except IOError as e:
+            logging.exception(e)
+            return None
+
+    def _make_render_engine(self):
+        resolve_context = self._make_resolve_context()
+        resolve_partial = self._make_resolve_partial()
+
+        engine = CachedRenderEngine(literal=self._to_unicode_hard,
+                                    escape=self._escape_to_unicode,
+                                    resolve_context=resolve_context,
+                                    resolve_partial=resolve_partial,
+                                    to_str=self.str_coerce)
+        return engine
+
+    def render_name(self, template_name, *context, **kwargs):
+        try:
+            parsed_template = None
+            cache_key = "template_%s" % template_name
+            parsed_template = self.memcache_get(cache_key)
+            if not parsed_template:
+                loader = self._make_loader()
+                template = loader.load_name(template_name)
+                template = self._to_unicode_hard(template)
+                parsed_template = parse(template, None)
+                self.memcache_set(cache_key, parsed_template)
+
+            stack = ContextStack.create(*context, **kwargs)
+            self._context = stack
+            engine = self._make_render_engine()
+            return parsed_template.render(engine, stack)
+        except Exception as e:
+            logging.exception(e)
+            return e.message
+
 
 class MustacheRenderer(BaseRenderer):
     def __init__(self, handler, search_dirs):
         super(MustacheRenderer, self).__init__(handler)
-        self.renderer = pystache.Renderer(search_dirs=search_dirs)
+        self.renderer = CachedRenderer(handler.application.memcached_client,
+                                       search_dirs=search_dirs)
 
     def _default_template_variables(self, kwargs):
         super(MustacheRenderer, self)._default_template_variables(kwargs)
@@ -64,7 +134,7 @@ class MustacheRenderer(BaseRenderer):
     def render_string_template(self, string_template, **kwargs):
         self._default_template_variables(kwargs)
         self.add_options_variables(kwargs)
-        return pystache.render(string_template, kwargs)
+        return self.renderer.render(string_template, kwargs)
 
     def render(self, template_name, context=None, **kwargs):
         # template_name = "".join(template_name.split('.')[:-1])
