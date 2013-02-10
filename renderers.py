@@ -120,7 +120,7 @@ class MustacheRenderer(BaseRenderer):
         super(MustacheRenderer, self).__init__(handler)
         if caching:
             self.renderer = CachedRenderer(
-                handler.application.memcached_client,
+                handler.application.cache,
                 search_dirs=search_dirs)
         else:
             self.renderer = PystacheRenderer(search_dirs=search_dirs)
