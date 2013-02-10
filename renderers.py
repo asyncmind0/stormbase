@@ -116,10 +116,14 @@ class CachedRenderer(PystacheRenderer):
 
 
 class MustacheRenderer(BaseRenderer):
-    def __init__(self, handler, search_dirs):
+    def __init__(self, handler, search_dirs, caching=True):
         super(MustacheRenderer, self).__init__(handler)
-        self.renderer = CachedRenderer(handler.application.memcached_client,
-                                       search_dirs=search_dirs)
+        if caching:
+            self.renderer = CachedRenderer(
+                handler.application.memcached_client,
+                search_dirs=search_dirs)
+        else:
+            self.renderer = PystacheRenderer(search_dirs=search_dirs)
 
     def _default_template_variables(self, kwargs):
         super(MustacheRenderer, self)._default_template_variables(kwargs)

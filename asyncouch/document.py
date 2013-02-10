@@ -10,6 +10,7 @@ class ViewResult(list):
 
 class Document(MutableMapping):
     _data_ = {}
+    __meta__ = {}
 
     def __len__(self):
         return self._data_.__len__()
@@ -47,7 +48,7 @@ class Document(MutableMapping):
     def get_defaults(self):
         raise NotImplementedError()
 
-    def __init__(self, value=None):
+    def __init__(self, value=None, meta=None):
         # self._values_dict.update(default)
         default = self.__class__.defaults
         # print value
@@ -69,3 +70,10 @@ class Document(MutableMapping):
         #    if key not in value:
         #        value[key] = default[key]
         self._data_ = value
+        self.set_meta(meta)
+
+    def set_meta(self, meta):
+        self.__meta__ = meta
+
+    def get_meta(self):
+        return self.__meta__

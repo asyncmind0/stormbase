@@ -32,6 +32,7 @@ def define_options(other_options=()):
     define("server_host")
     define("cookie_secret")
     define("session_secret")
+    define("session_timeout", type=int)
     define("memcached_addresses", type=list)
     for opt in other_options:
         define(*opt)

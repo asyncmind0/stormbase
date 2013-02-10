@@ -1,4 +1,3 @@
-from debug import debug as sj_debug
 '''
 @author: Manuel Mejia
 '''
@@ -7,7 +6,6 @@ import pickle
 import hmac
 import uuid
 import hashlib
-import pylibmc
 import logging
 
 
@@ -37,17 +35,17 @@ class Session(SessionData):
 
 
 class SessionManager(object):
-    def __init__(self, secret, memcached_address, session_timeout):
+    def __init__(self, secret, cache, session_timeout):
         self.secret = secret
-        self.memcached_address = memcached_address
-        self.session_timeout = session_timeout
+        self.cache = cache
+        self.session_timeout = int(session_timeout)
 
     def _fetch(self, session_id):
         try:
-            mc = pylibmc.Client(self.memcached_address)
-            session_data = raw_data = mc.get(session_id)
+            session_data = raw_data = self.cache.get(session_id)
             if raw_data is not None:
-                mc.replace(session_id, raw_data, self.session_timeout, 0)
+                self.cache.replace(session_id, raw_data,
+                                   self.session_timeout, 0)
                 session_data = pickle.loads(raw_data)
             if isinstance(session_data, type({})):
                 return session_data
@@ -91,8 +89,8 @@ class SessionManager(object):
         request_handler.set_secure_cookie("verification", session.hmac_key)
         session_data = pickle.dumps(
             dict(session.items()), pickle.HIGHEST_PROTOCOL)
-        mc = pylibmc.Client(self.memcached_address)
-        mc.set(session.session_id, session_data, self.session_timeout, 0)
+        self.cache.set(session.session_id, session_data,
+                       self.session_timeout, 0)
 
     def _generate_id(self):
         new_id = hashlib.sha256(self.secret + str(uuid.uuid4()))

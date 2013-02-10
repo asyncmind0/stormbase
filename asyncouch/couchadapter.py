@@ -112,6 +112,10 @@ class CouchDbAdapter(couch.AsyncCouch):
 
         super(CouchDbAdapter, self).save_doc(doc._data_, save_callback)
 
+    def delete_docs(self, docs, callback=None, all_or_nothing=False):
+        super(CouchDbAdapter, self).delete_docs(map(lambda x: x._data_, docs),
+                                             callback, all_or_nothing)
+
     def _json_encode(self, value):
         return json.dumps(value, cls=JSONEncoder)
 

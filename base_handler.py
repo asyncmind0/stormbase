@@ -68,8 +68,11 @@ class StormBaseHandler(tornado.web.RequestHandler):
         self.render_method = kwargs.get('render_method', 'html')
         render_engine = kwargs.get('render_engine', 'jinja')
         self.render_engine = JinjaRenderer(self, self.application.jinja_env) \
-            if render_engine == 'jinja' else MustacheRenderer(
-                self, [self.application.settings['template_path']])
+            if render_engine == 'jinja' \
+            and hasattr(self.application, 'jinja_env') \
+            else MustacheRenderer(
+                self, [self.application.settings['template_path']],
+                not options.debug)
         self.params = kwargs
 
     def get_current_user(self):
