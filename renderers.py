@@ -97,7 +97,7 @@ class CachedRenderer(PystacheRenderer):
     def render_name(self, template_name, *context, **kwargs):
         try:
             parsed_template = None
-            cache_key = "template_%s" % template_name
+            cache_key = "%s_template_%s" % (options.site_name, template_name)
             parsed_template = self.memcache_get(cache_key)
             if not parsed_template:
                 loader = self._make_loader()
