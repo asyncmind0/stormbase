@@ -1,8 +1,9 @@
+from stormbase.asyncouch.couchadapter import Document
+from stormbase.tuct import tuct
+
 from diff_match_patch import diff_match_patch as dmp
 from uuid import uuid4
 from datetime import datetime
-from couchadapter import Document
-from tuct import tuct
 
 
 class Diff(Document):

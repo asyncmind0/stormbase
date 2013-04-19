@@ -7,7 +7,7 @@ from tornado import gen
 
 import couch
 from document import ViewResult, Document
-from util import JSONEncoder
+from stormbase.util import JSONEncoder
 
 
 def wrap_results(data, model=Document):

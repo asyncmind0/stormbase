@@ -2,21 +2,29 @@ import tornado
 import tornado.web
 from tornado.options import options
 from stormbase import session
+from stormbase.util import dump_json, load_json
 import urllib
 import logging
 import traceback
 import os
 import marshal
-import pylibmc
+
+try:
+    import pylibmc as memcache
+except ImportError:
+    import memcache
+
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 
 from tornado import gen
 from tornado import web
-from stormbase.util import dump_json, load_json
 from tornado.curl_httpclient import CurlAsyncHTTPClient
-from urlparse import urlparse
 from tornado.httpclient import AsyncHTTPClient
 from tornado import stack_context
-from renderers import MustacheRenderer, JinjaRenderer
+from .renderers import MustacheRenderer, JinjaRenderer
 
 
 def async_engine(func):
@@ -58,6 +66,7 @@ if proxy_url:
 class StormBaseHandler(tornado.web.RequestHandler):
     session = None
     params = {}
+    user_class = None
 
     def initialize(self, *args, **kwargs):
         self.db = self.application.db
@@ -74,16 +83,6 @@ class StormBaseHandler(tornado.web.RequestHandler):
                 self, [self.application.settings['template_path']],
                 not options.debug)
         self.params = kwargs
-
-    def get_current_user(self):
-        userid = self.get_secure_cookie("user")
-        user_obj = None
-        if self.session:
-            user_obj = self.session.get(userid, None)
-        # logging.debug("LOGINSTATUS: %s, %s" % (userid, user_obj is not None))
-        if not userid or not user_obj:
-            return None
-        return user_obj
 
     def is_admin(self):
         return (True if self.current_user and
@@ -136,8 +135,8 @@ class StormBaseHandler(tornado.web.RequestHandler):
         try:
             logging.error("Handler Exception:  %s." % str(exception))
             traceback.print_exc()
-        except Exception, e:
-            print "Error logging." + str(e)
+        except Exception as e:
+            print("Error logging." + str(e))
 
     def memcache_set(self, key, value, expiry=0, compress=0):
         _data = marshal.dumps(value)
@@ -179,7 +178,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
                     http_client.fetch("http://freegeoip.net/json/%s" %
                                       self.real_ip,
                                       handle_request)
-        except Exception, e:
+        except Exception as e:
             self.error(e)
 
     @stack_context.contextlib.contextmanager
@@ -227,8 +226,10 @@ def get_static_handlers():
     static_root = os.path.join(cwd, static_root)
 
     return [
-        (r'/static/js/(.*)', tornado.web.StaticFileHandler,
-         {'path': os.path.join(cwd, 'src/javascript')}),
+        (r'/static/javascript/%s/(.*)' % options.site_name,
+         tornado.web.StaticFileHandler,
+         {'path': os.path.join(
+             cwd, 'src/javascript/%s/' % options.site_name)}),
         (r'/static/vendor/(.*)', tornado.web.StaticFileHandler,
          {'path': os.path.join(cwd, '../../var/static/vendor')}),
         (r'/static/common/(.*)$', tornado.web.StaticFileHandler,

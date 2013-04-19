@@ -132,7 +132,7 @@ class MustacheRenderer(BaseRenderer):
     def add_options_variables(self, kwargs):
         kwargs['class_options_debug_html'] = 'debug' \
             if options.debug_html else ''
-        for option in options:
+        for option in options._options:
             kwargs['option_' + option] = getattr(options, option)
 
     def render_string_template(self, string_template, **kwargs):
