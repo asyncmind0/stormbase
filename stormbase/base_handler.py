@@ -140,12 +140,12 @@ class StormBaseHandler(tornado.web.RequestHandler):
 
     def memcache_set(self, key, value, expiry=0, compress=0):
         _data = marshal.dumps(value)
-        mc = pylibmc.Client(options.memcached_addresses, binary=True)
+        mc = memcache.Client(options.memcached_addresses, binary=True)
         mc.set(key, _data, expiry, compress)
 
     def memcache_get(self, key):
         try:
-            mc = pylibmc.Client(options.memcached_addresses)
+            mc = memcache.Client(options.memcached_addresses)
             _data = raw_data = mc.get(key)
             if raw_data is not None:
                 _data = marshal.loads(raw_data)
