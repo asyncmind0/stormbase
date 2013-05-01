@@ -7,6 +7,8 @@ setup(
         author_email='steven@stevenjoseph.in',
         packages=['stormbase',
                   'stormbase.util',
+                  'stormbase.database',
+                  'stormbase.database.couchdb',
                   'stormbase.asyncouch',
                   'stormbase.auth',
                   'stormbase.test'],
