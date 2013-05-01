@@ -1,5 +1,5 @@
 from stormbase.asyncouch.couchadapter import Document
-from stormbase.tuct import tuct
+from stormbase.util import tuct
 
 from diff_match_patch import diff_match_patch as dmp
 from uuid import uuid4

@@ -175,6 +175,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
                         self.memcache_set(geo_key, geo)
                         logging.info(geo)
                     http_client = CurlAsyncHTTPClient()
+                    # need to make this a external configuration
                     http_client.fetch("http://freegeoip.net/json/%s" %
                                       self.real_ip,
                                       handle_request)
@@ -191,18 +192,31 @@ class StormBaseHandler(tornado.web.RequestHandler):
 
     def write_error(self, status_code, **kwargs):
         import traceback
+        import inspect
+        from cgi import escape
         exc_info = kwargs["exc_info"]
-        trace_info = ''.join(["%s<br/>" % line for line in
+        trace_info = ''.join(["%s<br/>" % escape(line) for line in
                               traceback.format_exception(*exc_info)])
+        locals_info = '<br>'.join([ ":".join(map(escape,map(str,v))) for v in
+                               inspect.trace()[-1][0].f_locals.iteritems()])
         request_info = ''.join(["<strong>%s</strong>: %s<br/>" %
-                                (k, self.request.__dict__[k])
+                                (escape(k), escape(str(self.request.__dict__[k])))
                                 for k in self.request.__dict__.keys()])
         error = exc_info[1]
         self.write(self.render_engine.render_error(error=error,
                                                    status_code=status_code,
                                                    trace_info=trace_info,
+                                                   locals_info=locals_info,
                                                    request_info=request_info))
         self.finish()
+
+    @property
+    def query_dict(self):
+        qd = {}
+        for key,value in self.request.arguments.iteritems():
+            qd[key] = value[0] if len(value) == 1 else value
+        return qd
+            
 
 
 class ErrorHandler(StormBaseHandler):
