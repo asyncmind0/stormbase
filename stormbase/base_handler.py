@@ -178,7 +178,9 @@ class StormBaseHandler(tornado.web.RequestHandler):
                     # need to make this a external configuration
                     http_client.fetch("http://freegeoip.net/json/%s" %
                                       self.real_ip,
-                                      handle_request)
+                                      callback=handle_request,
+                                      request_timeout=2,
+                                      connect_timeout=2)
         except Exception as e:
             self.error(e)
 
