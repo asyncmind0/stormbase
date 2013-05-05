@@ -28,8 +28,26 @@ from .renderers import MustacheRenderer, JinjaRenderer
 
 
 def async_engine(func):
-    return web.asynchronous(gen.engine(func))
+    return web.asynchronous(gen.coroutine(func))
 
+def memcache_set(key, value, expiry=0, compress=0):
+    _data = marshal.dumps(value)
+    mc = memcache.Client(options.memcached_addresses, binary=True)
+    mc.set(key, _data, expiry, compress)
+
+def memcache_get(key):
+    try:
+        mc = memcache.Client(options.memcached_addresses)
+        _data = raw_data = mc.get(key)
+        if raw_data is not None:
+            _data = marshal.loads(raw_data)
+        if isinstance(_data, type({})):
+            return _data
+        else:
+            return {}
+    except IOError as e:
+        logging.exception(e)
+        return {}
 
 class ProxyCurlAsyncHTTPClient(CurlAsyncHTTPClient):
     fetch_args = None
@@ -105,8 +123,8 @@ class StormBaseHandler(tornado.web.RequestHandler):
 
     def render(self, template_name, finish=True, **kwargs):
         self.write(self.render_engine.render(template_name, **kwargs))
-        if finish:
-            self.finish()
+        #if finish:
+        #    self.finish()
 
     def render_string_template(self, string_template, finish=True, **kwargs):
         self.write(
@@ -138,24 +156,6 @@ class StormBaseHandler(tornado.web.RequestHandler):
         except Exception as e:
             print("Error logging." + str(e))
 
-    def memcache_set(self, key, value, expiry=0, compress=0):
-        _data = marshal.dumps(value)
-        mc = memcache.Client(options.memcached_addresses, binary=True)
-        mc.set(key, _data, expiry, compress)
-
-    def memcache_get(self, key):
-        try:
-            mc = memcache.Client(options.memcached_addresses)
-            _data = raw_data = mc.get(key)
-            if raw_data is not None:
-                _data = marshal.loads(raw_data)
-            if isinstance(_data, type({})):
-                return _data
-            else:
-                return {}
-        except IOError as e:
-            logging.exception(e)
-            return {}
 
     def get_real_ip(self, geolocate=True):
         try:

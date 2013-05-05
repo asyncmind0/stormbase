@@ -55,18 +55,7 @@ def parse_options(configpath):
 def configure(configpath="conf", other_options=()):
     define_options(other_options)
     retval = parse_options(configpath)
-
     logging.basicConfig()
-    # logging.getLogger().setLevel(logging.INFO)
-    # logging.getLogger('httpclient').setLevel(logging.DEBUG)
-    # logging.getLogger('tornado.httpclient').setLevel(logging.INFO)
-    # logging.getLogger().addFilter(logging.Filter('httpclient'))
-    # logging.getLogger().addHandler(LogHandler())
     logging.getLogger().addFilter(LogFilter())
-
-    logging.debug("Hello NiceDesign")
-    logging.info("Hello NiceDesign")
-    logging.warning("Hello NiceDesign")
-    logging.error("Hello NiceDesign")
-    logging.critical("Hello NiceDesign")
+    logging.getLogger("tornado.general").addFilter(LogFilter())
     return retval

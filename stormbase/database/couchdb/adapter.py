@@ -4,8 +4,11 @@ from corduroy.config import defaults
 import jsonpickle
 import json as _json
 from uuid import uuid4
+import tornado
 from tornado import gen
 from datetime import datetime
+from tornado.concurrent import Future
+from tornado import httputil, stack_context
 
 
 class JSONEncoder(_json.JSONEncoder):
@@ -49,7 +52,7 @@ class CouchDBAdapter(object):
     def __init__(self, db):
         self.db = db
 
-    def _handle_results(self, result, model):
+    def _handle_results(self, future, result, model):
         result = result[0][0]
         if result and isinstance(result, list):
             if len(result) > 1:
@@ -58,15 +61,27 @@ class CouchDBAdapter(object):
                 result = model(result.rows.pop())
         elif result:
             result = model(result)
-          
+        future.set_result(r)
         return result
 
-    @gen.engine
     def get(self, key, model, callback=None, **kwarg):
-        result = yield gen.Task(self.db.get, key, **kwarg)
-        callback(self._handle_results(result, model))
+        future = Future()
+        if callback is not None:
+            callback = stack_context.wrap(callback)
+            def handle_future(future):
+                exc = future.exception()
+                if exc is not None:
+                    logging.exception(exc)
+                response = future.result()
+                ioloop = tornado.ioloop.IOLoop.instance()
+                ioloop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+        result = self.db.get(key,
+                             callback=lambda r: self._handle_results(r, model),
+                             **kwarg)
+        return future
 
-    @gen.engine
+    @gen.coroutine
     def save(self, docs, callback=None, **kwargs):
         if not isinstance(docs, list):
             docs = [docs]
@@ -74,23 +89,61 @@ class CouchDBAdapter(object):
             if not doc.get('_id'):
                 doc['_id'] = unicode(uuid4())
         doc['doc_type'] = doc.__class__.__name__
-        result = yield gen.Task(self.db.save, doc)
-        callback(result)
+        future = Future()
+        if callback is not None:
+            callback = stack_context.wrap(callback)
+            def handle_future(future):
+                exc = future.exception()
+                if exc is not None:
+                    logging.exception(exc)
+                response = future.result()
+                ioloop = tornado.ioloop.IOLoop.instance()
+                ioloop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+        result = self.db.save(doc, callback=handle_future)
+        return future
 
-    @gen.engine
     def view(self, view, model=None, callback=None, **kwargs):
+        future = Future()
         if model:
             view  = "%s/%s" % (model.__name__.lower(), view)
-        result = yield gen.Task(
-            self.db.view, view, **kwargs)
-        result = result[0][0]
-        #if kwargs.get('reduce'):
-        if result and kwargs.get('include_docs', True):
-            result.rows = [model(x.value) if isinstance(x.value, dict) and model
-                           else x.value for x in result.rows]
-        callback(result)
+        if callback is not None:
+            callback = stack_context.wrap(callback)
 
-    @gen.engine
+            def handle_future(future):
+                exc = future.exception()
+                #if isinstance(exc, HTTPError) and exc.response is not None:
+                #    response = exc.response
+                #elif exc is not None:
+                #    response = HTTPResponse(
+                #        request, 599, error=exc,
+                #        request_time=time.time() - request.start_time)
+                #else:
+                response = future.result()
+                ioloop = tornado.ioloop.IOLoop.instance()
+                ioloop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+        def handle_result(result, status):
+            if result and kwargs.get('include_docs', True):
+                result.rows = [model(x.value) if isinstance(x.value, dict) and model
+                               else x.value for x in result.rows]
+            future.set_result(result)
+        self.db.view(view, callback=handle_result, **kwargs)
+        return future
+
     def delete(self, key, callback=None, **kwarg):
-        result = yield gen.Task(self.db.delete, key, **kwarg)
-        callback(result)
+        future = Future()
+        if callback is not None:
+            callback = stack_context.wrap(callback)
+            def handle_future(future):
+                exc = future.exception()
+                if exc is not None:
+                    logging.exception(exc)
+                response = future.result()
+                ioloop = tornado.ioloop.IOLoop.instance()
+                ioloop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+        result = self.db.delete(key,
+                                callback=lambda r: future.set_result(r),
+                                **kwarg)
+        return future
