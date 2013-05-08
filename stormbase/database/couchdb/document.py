@@ -1,6 +1,6 @@
 from corduroy import Document
 from datetime import datetime
-import dateutil
+from dateutil.parser import parse as date_parse
 
 class BaseDocument(Document):
     def __init__(self, *args, **kwargs):
@@ -16,7 +16,7 @@ class BaseDocument(Document):
             if tkey in val_keys and value[tkey]:
                 if isinstance(default[tkey], datetime):
                     if not isinstance(value[tkey], datetime):
-                        dt = dateutil.parser.parse(value[tkey])
+                        dt = date_parse(value[tkey])
                         value[tkey] = dt
                 else:
                     value[tkey] = type(default[tkey])(value[tkey])

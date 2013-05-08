@@ -2,13 +2,13 @@
 import sys
 sys.path.append('.')
 import unittest
-from options import configure
+from stormbase.options import configure
 import tornado.testing
 
 TEST_MODULES = [
     #'test_asynccouch',
     'test_couchadapter',
-    'test_couchversions',
+    #'test_couchversions',
 ]
 
 

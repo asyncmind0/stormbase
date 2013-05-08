@@ -53,7 +53,7 @@ class CouchDBAdapter(object):
         self.db = db
 
     def _handle_results(self, future, result, model):
-        result = result[0][0]
+        result = result[0]
         if result and isinstance(result, list):
             if len(result) > 1:
                 result = [model(x) for x in result]
@@ -61,7 +61,7 @@ class CouchDBAdapter(object):
                 result = model(result.rows.pop())
         elif result:
             result = model(result)
-        future.set_result(r)
+        future.set_result(result)
         return result
 
     def get(self, key, model, callback=None, **kwarg):
@@ -76,12 +76,11 @@ class CouchDBAdapter(object):
                 ioloop = tornado.ioloop.IOLoop.instance()
                 ioloop.add_callback(callback, response)
             future.add_done_callback(handle_future)
-        result = self.db.get(key,
-                             callback=lambda r: self._handle_results(r, model),
-                             **kwarg)
+        result = self.db.get(
+            key, callback=lambda data, status: self._handle_results(future, (data, status), model),
+            **kwarg)
         return future
 
-    @gen.coroutine
     def save(self, docs, callback=None, **kwargs):
         if not isinstance(docs, list):
             docs = [docs]
@@ -98,9 +97,13 @@ class CouchDBAdapter(object):
                     logging.exception(exc)
                 response = future.result()
                 ioloop = tornado.ioloop.IOLoop.instance()
-                ioloop.add_callback(callback, response)
+                ioloop.add_callback(callback, *response)
             future.add_done_callback(handle_future)
-        result = self.db.save(doc, callback=handle_future)
+        def handle_result(data, status):
+            future.set_result((data, status))
+        result = self.db.save(
+            doc, callback=handle_result)
+
         return future
 
     def view(self, view, model=None, callback=None, **kwargs):
