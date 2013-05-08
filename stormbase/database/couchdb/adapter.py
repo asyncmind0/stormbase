@@ -7,7 +7,7 @@ from uuid import uuid4
 import tornado
 from tornado import gen
 from datetime import datetime
-from tornado.concurrent import Future
+from tornado.concurrent import Future, return_future
 from tornado import httputil, stack_context
 
 
@@ -55,33 +55,19 @@ class CouchDBAdapter(object):
     def _handle_results(self, future, result, model):
         result = result[0]
         if result and isinstance(result, list):
-            if len(result) > 1:
-                result = [model(x) for x in result]
-            else:
-                result = model(result.rows.pop())
+            result = [model(x) for x in result]
         elif result:
             result = model(result)
         future.set_result(result)
-        return result
 
-    def get(self, key, model, callback=None, **kwarg):
+    def get(self, key, model, **kwarg):
         future = Future()
-        if callback is not None:
-            callback = stack_context.wrap(callback)
-            def handle_future(future):
-                exc = future.exception()
-                if exc is not None:
-                    logging.exception(exc)
-                response = future.result()
-                ioloop = tornado.ioloop.IOLoop.instance()
-                ioloop.add_callback(callback, response)
-            future.add_done_callback(handle_future)
         result = self.db.get(
-            key, callback=lambda data, status: self._handle_results(future, (data, status), model),
-            **kwarg)
+            key, callback=lambda data, status: self._handle_results(
+                future, (data, status), model), **kwarg)
         return future
 
-    def save(self, docs, callback=None, **kwargs):
+    def save(self, docs, **kwargs):
         if not isinstance(docs, list):
             docs = [docs]
         for doc in docs:
@@ -89,43 +75,15 @@ class CouchDBAdapter(object):
                 doc['_id'] = unicode(uuid4())
         doc['doc_type'] = doc.__class__.__name__
         future = Future()
-        if callback is not None:
-            callback = stack_context.wrap(callback)
-            def handle_future(future):
-                exc = future.exception()
-                if exc is not None:
-                    logging.exception(exc)
-                response = future.result()
-                ioloop = tornado.ioloop.IOLoop.instance()
-                ioloop.add_callback(callback, *response)
-            future.add_done_callback(handle_future)
-        def handle_result(data, status):
-            future.set_result((data, status))
         result = self.db.save(
-            doc, callback=handle_result)
+            doc, callback=lambda data, status: future.set_result((data, status)))
 
         return future
 
-    def view(self, view, model=None, callback=None, **kwargs):
+    def view(self, view, model=None, **kwargs):
         future = Future()
         if model:
             view  = "%s/%s" % (model.__name__.lower(), view)
-        if callback is not None:
-            callback = stack_context.wrap(callback)
-
-            def handle_future(future):
-                exc = future.exception()
-                #if isinstance(exc, HTTPError) and exc.response is not None:
-                #    response = exc.response
-                #elif exc is not None:
-                #    response = HTTPResponse(
-                #        request, 599, error=exc,
-                #        request_time=time.time() - request.start_time)
-                #else:
-                response = future.result()
-                ioloop = tornado.ioloop.IOLoop.instance()
-                ioloop.add_callback(callback, response)
-            future.add_done_callback(handle_future)
         def handle_result(result, status):
             if result and kwargs.get('include_docs', True):
                 result.rows = [model(x.value) if isinstance(x.value, dict) and model
@@ -136,16 +94,6 @@ class CouchDBAdapter(object):
 
     def delete(self, key, callback=None, **kwarg):
         future = Future()
-        if callback is not None:
-            callback = stack_context.wrap(callback)
-            def handle_future(future):
-                exc = future.exception()
-                if exc is not None:
-                    logging.exception(exc)
-                response = future.result()
-                ioloop = tornado.ioloop.IOLoop.instance()
-                ioloop.add_callback(callback, response)
-            future.add_done_callback(handle_future)
         result = self.db.delete(key,
                                 callback=lambda r: future.set_result(r),
                                 **kwarg)

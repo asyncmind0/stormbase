@@ -52,7 +52,7 @@ def parse_options(configpath):
     return tornado.options.parse_command_line()
 
 
-def configure(configpath="stormbase/conf", other_options=()):
+def configure(configpath=os.path.join(os.getcwd(),"conf"), other_options=()):
     define_options(other_options)
     retval = parse_options(configpath)
     logging.basicConfig()
