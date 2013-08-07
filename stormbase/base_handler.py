@@ -173,7 +173,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
                 else:
                     def handle_request(responses):
                         geo = load_json(responses.body)
-                        self.memcache_set(geo_key, geo)
+                        memcache_set(geo_key, geo)
                         logging.info(geo)
                     http_client = CurlAsyncHTTPClient()
                     # need to make this a external configuration
