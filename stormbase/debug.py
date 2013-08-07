@@ -11,6 +11,7 @@ from IPython.core.debugger import Tracer
 #import pudb
 #debug = pudb.set_trace
 debug = Tracer('Linux')
+import pprint
 
 
 def trace():

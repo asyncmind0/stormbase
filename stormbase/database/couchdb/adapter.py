@@ -1,15 +1,13 @@
 import corduroy
 from corduroy.atoms import View, odict
 from corduroy.config import defaults
-import jsonpickle
-import json as _json
-from uuid import uuid4
 import tornado
 from tornado import gen
-from datetime import datetime
 from tornado.concurrent import Future, return_future
 from tornado import httputil, stack_context
-
+import json as _json
+from uuid import uuid4
+from datetime import datetime
 
 class JSONEncoder(_json.JSONEncoder):
     def default(self, obj):
@@ -29,7 +27,6 @@ class json(object):
         """
         return _json.loads(string, 
                            object_hook=defaults.types.dict, **opts)
-        #return jsonpickle.decode(string)
 
     @classmethod
     def encode(cls, obj, **opts):
@@ -42,13 +39,14 @@ class json(object):
         """
         return _json.dumps(obj, allow_nan=False, cls=JSONEncoder,
                            ensure_ascii=False, encoding='utf-8', **opts)
-        #return jsonpickle.encode(obj)
 
 corduroy.config.json = json
 corduroy.couchdb.json = json
 corduroy.io.json = json
 
 class CouchDBAdapter(object):
+    """ Wraps a corduroy Database class and converts results into BaseDocument objects.
+    """
     def __init__(self, db):
         self.db = db
 
@@ -86,7 +84,8 @@ class CouchDBAdapter(object):
             view  = "%s/%s" % (model.__name__.lower(), view)
         def handle_result(result, status):
             if result and kwargs.get('include_docs', True):
-                result.rows = [model(x.value) if isinstance(x.value, dict) and model
+                result.rows = [model(x.value) if isinstance(x.value, dict)
+                               and model
                                else x.value for x in result.rows]
             future.set_result(result)
         self.db.view(view, callback=handle_result, **kwargs)
@@ -94,7 +93,6 @@ class CouchDBAdapter(object):
 
     def delete(self, key, callback=None, **kwarg):
         future = Future()
-        result = self.db.delete(key,
-                                callback=lambda r: future.set_result(r),
-                                **kwarg)
+        result = self.db.delete(
+            key, callback=lambda r: future.set_result(r), **kwarg)
         return future

@@ -59,7 +59,8 @@ class ProxyCurlAsyncHTTPClient(CurlAsyncHTTPClient):
             max_clients)
         self.fetch_args = kwargs
 
-    def fetch(self, request, callback, **kwargs):
+    def fetch(self, request, callback=None, **kwargs):
+        logging.info("request %s", request) 
         kwargs.update(self.fetch_args)
         if 'no_proxy' in kwargs.keys():
             logging.debug("found no_proxy:%s" % str(kwargs['no_proxy']))
@@ -68,8 +69,8 @@ class ProxyCurlAsyncHTTPClient(CurlAsyncHTTPClient):
                     del kwargs['proxy_host']
                     del kwargs['proxy_port']
             del kwargs['no_proxy']
-        super(
-            ProxyCurlAsyncHTTPClient, self).fetch(request, callback, **kwargs)
+        return super(ProxyCurlAsyncHTTPClient, self).fetch(
+            request, callback, **kwargs)
 
 proxy_url = os.getenv('http_proxy', '')
 
@@ -78,7 +79,7 @@ if proxy_url:
     AsyncHTTPClient.configure(
         ProxyCurlAsyncHTTPClient, proxy_host=parsed.hostname,
         proxy_port=parsed.port, proxy_username=parsed.username,
-        proxy_password=parsed.password, no_proxy=['localhost'])
+        proxy_password=parsed.password, no_proxy=['localhost','127.0.0.1'])
 
 
 class StormBaseHandler(tornado.web.RequestHandler):
@@ -166,7 +167,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
                 "Request from " + str(self.real_ip) + str(self.__class__))
             if geolocate:
                 geo_key = "geo_%s" % self.real_ip
-                cached_geo = self.memcache_get(geo_key)
+                cached_geo = memcache_get(geo_key)
                 if cached_geo:
                     logging.info(cached_geo)
                 else:

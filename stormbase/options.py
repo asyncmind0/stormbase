@@ -6,7 +6,7 @@ from tornado.options import options, define
 
 class LogFilter(logging.Filter):
     def filter(self, rec):
-        if rec.module in ['httpclient', 'curl_httpclient'] \
+        if rec.module in ['httpclient', 'curl_httpclient', 'scheduler'] \
                 and rec.levelno == logging.DEBUG:
             return False
         elif rec.msg == '/static/' and rec.levelno == logging.DEBUG:
