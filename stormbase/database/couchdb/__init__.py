@@ -1,2 +1,2 @@
-from document import BaseDocument
-from adapter import CouchDBAdapter
+from .document import BaseDocument
+from .adapter import CouchDBAdapter

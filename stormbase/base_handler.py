@@ -23,17 +23,19 @@ from tornado import gen
 from tornado import web
 from tornado.curl_httpclient import CurlAsyncHTTPClient
 from tornado.httpclient import AsyncHTTPClient
-from tornado import stack_context
+from contextlib import contextmanager
 from .renderers import MustacheRenderer, JinjaRenderer
 
 
 def async_engine(func):
     return web.asynchronous(gen.coroutine(func))
 
+
 def memcache_set(key, value, expiry=0, compress=0):
     _data = marshal.dumps(value)
     mc = memcache.Client(options.memcached_addresses, binary=True)
     mc.set(key, _data, expiry, compress)
+
 
 def memcache_get(key):
     try:
@@ -49,6 +51,7 @@ def memcache_get(key):
         logging.exception(e)
         return {}
 
+
 class ProxyCurlAsyncHTTPClient(CurlAsyncHTTPClient):
     fetch_args = None
 
@@ -60,7 +63,7 @@ class ProxyCurlAsyncHTTPClient(CurlAsyncHTTPClient):
         self.fetch_args = kwargs
 
     def fetch(self, request, callback=None, **kwargs):
-        logging.info("request %s", request) 
+        logging.info("request %s", request)
         kwargs.update(self.fetch_args)
         if 'no_proxy' in kwargs.keys():
             logging.debug("found no_proxy:%s" % str(kwargs['no_proxy']))
@@ -79,7 +82,7 @@ if proxy_url:
     AsyncHTTPClient.configure(
         ProxyCurlAsyncHTTPClient, proxy_host=parsed.hostname,
         proxy_port=parsed.port, proxy_username=parsed.username,
-        proxy_password=parsed.password, no_proxy=['localhost','127.0.0.1'])
+        proxy_password=parsed.password, no_proxy=['localhost', '127.0.0.1'])
 
 
 class StormBaseHandler(tornado.web.RequestHandler):
@@ -124,7 +127,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
 
     def render(self, template_name, finish=True, **kwargs):
         self.write(self.render_engine.render(template_name, **kwargs))
-        #if finish:
+        # if finish:
         #    self.finish()
 
     def render_string_template(self, string_template, finish=True, **kwargs):
@@ -157,7 +160,6 @@ class StormBaseHandler(tornado.web.RequestHandler):
         except Exception as e:
             print("Error logging." + str(e))
 
-
     def get_real_ip(self, geolocate=True):
         try:
             self.real_ip = self.request.headers.get(
@@ -185,7 +187,7 @@ class StormBaseHandler(tornado.web.RequestHandler):
         except Exception as e:
             self.error(e)
 
-    @stack_context.contextlib.contextmanager
+    @contextmanager
     def on_async_error(self):
         try:
             yield
@@ -200,10 +202,11 @@ class StormBaseHandler(tornado.web.RequestHandler):
         exc_info = kwargs["exc_info"]
         trace_info = ''.join(["%s<br/>" % escape(line) for line in
                               traceback.format_exception(*exc_info)])
-        locals_info = '<br>'.join([ ":".join(map(escape,map(str,v))) for v in
-                               inspect.trace()[-1][0].f_locals.iteritems()])
+        locals_info = '<br>'.join([":".join(map(escape, map(str, v))) for v in
+                                   inspect.trace()[-1][0].f_locals.iteritems()])
         request_info = ''.join(["<strong>%s</strong>: %s<br/>" %
-                                (escape(k), escape(str(self.request.__dict__[k])))
+                                (escape(
+                                    k), escape(str(self.request.__dict__[k])))
                                 for k in self.request.__dict__.keys()])
         error = exc_info[1]
         self.write(self.render_engine.render_error(error=error,
@@ -216,10 +219,9 @@ class StormBaseHandler(tornado.web.RequestHandler):
     @property
     def query_dict(self):
         qd = {}
-        for key,value in self.request.arguments.iteritems():
+        for key, value in self.request.arguments.iteritems():
             qd[key] = value[0] if len(value) == 1 else value
         return qd
-            
 
 
 class ErrorHandler(StormBaseHandler):

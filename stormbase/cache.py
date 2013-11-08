@@ -1,4 +1,7 @@
-from pylibmc import Client
+try:
+    from pylibmc import Client
+except ImportError:
+    from memcache import Client
 
 
 class MemcachedAdapter(Client):
