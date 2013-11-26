@@ -22,7 +22,7 @@ class BaseRenderer(object):
         elif vendor:
             path = urllib.basejoin(options.vendor_css_root, css)
         else:
-            path = urllib.basejoin(options.static_root, 'css/')
+            path = urllib.basejoin(options.static_root, '%s/css/' % options.site_name)
             path = urllib.basejoin(path, css)
         cachestring = ('' if cache or not options.debug
                        else '?cacheid=%s' % CACHID)
@@ -38,7 +38,7 @@ class BaseRenderer(object):
         elif vendor:
             path = urllib.basejoin(options.vendor_script_root, script)
         else:
-            path = urllib.basejoin(options.script_root, script)
+            path = "%s/%s/javascript/%s" % (options.static_root, options.site_name, script)
         cachestring = ('' if cache or not options.debug
                        else '?cacheid=%s' % CACHID)
         kwargs = " ".join(map(lambda x: "%s=\"%s\"" % x, kwargs.items()))
@@ -132,6 +132,8 @@ class MustacheRenderer(BaseRenderer):
     def add_options_variables(self, kwargs):
         kwargs['class_options_debug_html'] = 'debug' \
             if options.debug_html else ''
+        kwargs['js_debug'] = 'true' \
+            if options.debug else 'false'
         for option in options._options:
             kwargs['option_' + option] = getattr(options, option)
 
